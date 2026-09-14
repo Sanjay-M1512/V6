@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Identity Verification - Module 1</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            color: #222;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .upload-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .upload-card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+        }
+
+        .upload-card h2 {
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+
+        input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+
+        .verify-button {
+            display: block;
+            width: 100%;
+            margin-top: 25px;
+            padding: 14px;
+            border: none;
+            border-radius: 6px;
+            background: #1f6feb;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .verify-button:hover {
+            background: #1557b0;
+        }
+
+        .verify-button:disabled {
+            background: #999;
+            cursor: not-allowed;
+        }
+
+        .status {
+            margin-top: 25px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .result-section {
+            margin-top: 25px;
+        }
+
+        .result-card {
+            background: white;
+            padding: 20px;
+            margin-top: 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+        .result-card h3 {
+            margin-bottom: 15px;
+        }
+
+        .field {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .field-name {
+            font-weight: bold;
+        }
+
+        .match {
+            color: green;
+            font-weight: bold;
+        }
+
+        .mismatch {
+            color: red;
+            font-weight: bold;
+        }
+
+        .validation {
+            margin-top: 15px;
+        }
+
+        .validation-item {
+            padding: 8px 0;
+        }
+
+        @media (max-width: 700px) {
+            .upload-section {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+
+<body>
+
+<div class="container">
+
+    <h1>Identity Verification</h1>
+
+    <p class="subtitle">
+        Module 1 — OCR & Document Validation
+    </p>
+
+
+    <!-- ==========================================
+         DOCUMENT UPLOAD
+    =========================================== -->
+
+    <div class="upload-section">
+
+        <!-- Passport -->
+
+        <div class="upload-card">
+
+            <h2>Passport</h2>
+
+            <input
+                type="file"
+                id="passport"
+                accept="image/*"
+            >
+
+        </div>
+
+
+        <!-- Aadhaar -->
+
+        <div class="upload-card">
+
+            <h2>Aadhaar</h2>
+
+            <input
+                type="file"
+                id="aadhaar"
+                accept="image/*"
+            >
+
+        </div>
+
+    </div>
+
+
+    <!-- ==========================================
+         VERIFY BUTTON
+    =========================================== -->
+
+    <button
+        class="verify-button"
+        id="verifyButton"
+        onclick="verifyDocuments()"
+    >
+        Verify Documents
+    </button>
+
+
+    <!-- ==========================================
+         STATUS
+    =========================================== -->
+
+    <div
+        class="status"
+        id="status"
+    ></div>
+
+
+    <!-- ==========================================
+         RESULTS
+    =========================================== -->
+
+    <div
+        class="result-section"
+        id="results"
+    ></div>
+
+</div>
+
+
+<script>
+
+async function verifyDocuments() {
+
+    const passportFile =
+        document.getElementById("passport").files[0];
+
+    const aadhaarFile =
+        document.getElementById("aadhaar").files[0];
+
+    const button =
+        document.getElementById("verifyButton");
+
+    const status =
+        document.getElementById("status");
+
+    const results =
+        document.getElementById("results");
+
+
+    // ------------------------------------------
+    // Check files
+    // ------------------------------------------
+
+    if (!passportFile || !aadhaarFile) {
+
+        alert(
+            "Please upload both Passport and Aadhaar images."
+        );
+
+        return;
+    }
+
+
+    // ------------------------------------------
+    // Disable button
+    // ------------------------------------------
+
+    button.disabled = true;
+
+    button.innerText = "Processing...";
+
+    status.style.display = "block";
+
+    status.innerText =
+        "Uploading and processing documents...";
+
+    results.innerHTML = "";
+
+
+    try {
+
+        // --------------------------------------
+        // Create FormData
+        // --------------------------------------
+
+        const formData = new FormData();
+
+        formData.append(
+            "passport",
+            passportFile
+        );
+
+        formData.append(
+            "aadhaar",
+            aadhaarFile
+        );
+
+
+        // --------------------------------------
+        // Send request to Flask
+        // --------------------------------------
+
+        const response = await fetch(
+            "/api/verify",
+            {
+                method: "POST",
+                body: formData
+            }
+        );
+
+
+        const data = await response.json();
+
+
+        // --------------------------------------
+        // Handle response
+        // --------------------------------------
+
+        if (!response.ok || !data.success) {
+
+            throw new Error(
+                data.message ||
+                "Verification failed"
+            );
+        }
+
+
+        status.innerText =
+            "Document processing completed.";
+
+        displayResults(data);
+
+
+    } catch (error) {
+
+        status.innerText =
+            "Error: " + error.message;
+
+        status.style.color = "red";
+
+
+    } finally {
+
+        button.disabled = false;
+
+        button.innerText =
+            "Verify Documents";
+    }
+}
+
+
+// ==================================================
+// DISPLAY RESULTS
+// ==================================================
+
+function displayResults(data) {
+
+    const results =
+        document.getElementById("results");
+
+    results.innerHTML = "";
+
+
+    // ------------------------------------------
+    // Passport Result
+    // ------------------------------------------
+
+    if (data.passport) {
+
+        results.innerHTML +=
+            createDocumentResult(
+                "Passport",
+                data.passport
+            );
+    }
+
+
+    // ------------------------------------------
+    // Aadhaar Result
+    // ------------------------------------------
+
+    if (data.aadhaar) {
+
+        results.innerHTML +=
+            createDocumentResult(
+                "Aadhaar",
+                data.aadhaar
+            );
+    }
+
+
+    // ------------------------------------------
+    // Cross-document validation
+    // ------------------------------------------
+
+    if (data.cross_document_validation) {
+
+        results.innerHTML +=
+            createCrossValidationResult(
+                data.cross_document_validation
+            );
+    }
+}
+
+
+// ==================================================
+// DOCUMENT RESULT
+// ==================================================
+
+function createDocumentResult(
+    documentName,
+    documentData
+) {
+
+    let html = `
+
+        <div class="result-card">
+
+            <h3>${documentName}</h3>
+
+            <p>
+                <strong>Document Type:</strong>
+                ${documentData.document_type || "Unknown"}
+            </p>
+
+            <div class="validation">
+
+                <h4>Extracted Fields</h4>
+
+    `;
+
+
+    // ------------------------------------------
+    // Extracted fields
+    // ------------------------------------------
+
+    const fields =
+        documentData.fields || {};
+
+
+    for (const [key, value] of
+         Object.entries(fields)) {
+
+        html += `
+
+            <div class="field">
+
+                <span class="field-name">
+                    ${formatFieldName(key)}
+                </span>
+
+                <span>
+                    ${value || "Not detected"}
+                </span>
+
+            </div>
+
+        `;
+    }
+
+
+    html += `
+
+            </div>
+
+            <div class="validation">
+
+                <h4>Field Validation</h4>
+
+    `;
+
+
+    // ------------------------------------------
+    // Validation results
+    // ------------------------------------------
+
+    const validation =
+        documentData.field_validation || {};
+
+
+    for (const [key, result] of
+         Object.entries(validation)) {
+
+        const className =
+            result.valid
+            ? "match"
+            : "mismatch";
+
+        const status =
+            result.valid
+            ? "VALID"
+            : "INVALID";
+
+        html += `
+
+            <div class="validation-item">
+
+                ${formatFieldName(key)}:
+
+                <span class="${className}">
+                    ${status}
+                </span>
+
+            </div>
+
+        `;
+    }
+
+
+    html += `
+
+            </div>
+
+            <div class="validation">
+
+                <h4>Document Score</h4>
+
+                <p>
+                    <strong>
+                        ${documentData.document_score ?? 0}/100
+                    </strong>
+                </p>
+
+            </div>
+
+        </div>
+
+    `;
+
+    return html;
+}
+
+
+// ==================================================
+// CROSS DOCUMENT RESULT
+// ==================================================
+
+function createCrossValidationResult(
+    data
+) {
+
+    let html = `
+
+        <div class="result-card">
+
+            <h3>
+                Cross-Document Validation
+            </h3>
+
+            <p>
+                Overall Status:
+
+                <span class="${
+                    data.overall_status === "MATCH"
+                    ? "match"
+                    : "mismatch"
+                }">
+
+                    ${data.overall_status}
+
+                </span>
+
+            </p>
+
+            <div class="validation">
+
+    `;
+
+
+    const fields =
+        data.fields || {};
+
+
+    for (const [key, result] of
+         Object.entries(fields)) {
+
+        let className = "mismatch";
+
+        if (result.status === "MATCH") {
+            className = "match";
+        }
+
+        html += `
+
+            <div class="validation-item">
+
+                ${formatFieldName(key)}:
+
+                <span class="${className}">
+                    ${result.status}
+                </span>
+
+            </div>
+
+        `;
+    }
+
+
+    html += `
+
+            </div>
+
+        </div>
+
+    `;
+
+    return html;
+}
+
+
+// ==================================================
+// FIELD NAME FORMATTER
+// ==================================================
+
+function formatFieldName(fieldName) {
+
+    return fieldName
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, char =>
+            char.toUpperCase()
+        );
+}
+
+</script>
+
+</body>
+
+</html>
