@@ -178,16 +178,43 @@
         </div>
 
 
-        <!-- Aadhaar -->
+        <!-- Aadhaar / Driving License -->
 
         <div class="upload-card">
 
-            <h2>Aadhaar</h2>
+            <h2>ID Document</h2>
+
+            <div style="margin-bottom:12px;">
+                <label style="margin-right:16px;">
+                    <input
+                        type="radio"
+                        name="idDocType"
+                        value="aadhaar"
+                        checked
+                        onchange="switchIdDoc(this.value)"
+                    > Aadhaar
+                </label>
+                <label>
+                    <input
+                        type="radio"
+                        name="idDocType"
+                        value="driving_license"
+                        onchange="switchIdDoc(this.value)"
+                    > Driving License
+                </label>
+            </div>
 
             <input
                 type="file"
                 id="aadhaar"
                 accept="image/*"
+            >
+
+            <input
+                type="file"
+                id="driving_license"
+                accept="image/*"
+                style="display:none;"
             >
 
         </div>
@@ -232,13 +259,25 @@
 
 <script>
 
+function switchIdDoc(value) {
+    document.getElementById("aadhaar").style.display =
+        value === "aadhaar" ? "" : "none";
+    document.getElementById("driving_license").style.display =
+        value === "driving_license" ? "" : "none";
+}
+
+
 async function verifyDocuments() {
 
     const passportFile =
         document.getElementById("passport").files[0];
 
-    const aadhaarFile =
-        document.getElementById("aadhaar").files[0];
+    const idDocType = document.querySelector(
+        "input[name='idDocType']:checked"
+    ).value;
+
+    const idFile =
+        document.getElementById(idDocType).files[0];
 
     const button =
         document.getElementById("verifyButton");
@@ -254,10 +293,12 @@ async function verifyDocuments() {
     // Check files
     // ------------------------------------------
 
-    if (!passportFile || !aadhaarFile) {
+    if (!passportFile || !idFile) {
 
         alert(
-            "Please upload both Passport and Aadhaar images."
+            "Please upload both Passport and " +
+            (idDocType === "aadhaar" ? "Aadhaar" : "Driving License") +
+            " images."
         );
 
         return;
@@ -294,8 +335,8 @@ async function verifyDocuments() {
         );
 
         formData.append(
-            "aadhaar",
-            aadhaarFile
+            idDocType,
+            idFile
         );
 
 
@@ -388,6 +429,20 @@ function displayResults(data) {
             createDocumentResult(
                 "Aadhaar",
                 data.aadhaar
+            );
+    }
+
+
+    // ------------------------------------------
+    // Driving License Result
+    // ------------------------------------------
+
+    if (data.driving_license) {
+
+        results.innerHTML +=
+            createDocumentResult(
+                "Driving License",
+                data.driving_license
             );
     }
 

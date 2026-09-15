@@ -122,6 +122,18 @@ def detect_document_type(text):
         "YEAR OF BIRTH"
     ]
 
+    dl_keywords = [
+        "DRIVING LICENCE",
+        "DRIVING LICENSE",
+        "LICENCE NO",
+        "LICENSE NO",
+        "DL NO",
+        "VALIDITY",
+        "NON TRANSPORT",
+        "TRANSPORT",
+        "DATE OF FIRST ISSUE"
+    ]
+
     passport_score = sum(
         keyword in upper
         for keyword in passport_keywords
@@ -131,6 +143,22 @@ def detect_document_type(text):
         keyword in upper
         for keyword in aadhaar_keywords
     )
+
+    dl_score = sum(
+        keyword in upper
+        for keyword in dl_keywords
+    )
+
+    best = max(passport_score, aadhaar_score, dl_score)
+
+    if best == 0:
+        pass
+    elif best == passport_score and passport_score > aadhaar_score and passport_score > dl_score:
+        return "passport"
+    elif best == aadhaar_score and aadhaar_score > passport_score and aadhaar_score > dl_score:
+        return "aadhaar"
+    elif best == dl_score and dl_score > passport_score and dl_score > aadhaar_score:
+        return "driving_license"
 
     if passport_score > aadhaar_score:
         return "passport"
@@ -150,6 +178,13 @@ def detect_document_type(text):
         text
     ):
         return "aadhaar"
+
+    # DL number pattern: e.g. MH01-1234567890
+    if re.search(
+        r"\b[A-Z]{2}\d{2}[\-\s]?\d{7,11}\b",
+        text
+    ):
+        return "driving_license"
 
     return "unknown"
 
@@ -2146,6 +2181,375 @@ def parse_aadhaar(
 
 
 # ============================================================
+# DRIVING LICENSE PARSER
+# ============================================================
+
+def _extract_dl_name_tokens(raw):
+    """
+    Clean and extract valid name tokens from a Driving License candidate line.
+    Handles right-side labels and background OCR noise.
+    """
+    if not raw:
+        return ""
+
+    # Strip known right-side labels/headers
+    raw = re.split(
+        r"\b(?:HOLDER|SIGNATURE|DATE|DOB|BLOOD|ORGAN|DONOR|GROUP|ADDRESS|SON|DAUGHTER|WIFE|PDI|VALIDITY|ISSUE)\b",
+        raw,
+        flags=re.IGNORECASE
+    )[0]
+
+    tokens = raw.strip().split()
+    if not tokens:
+        return ""
+
+    valid_name_tokens = []
+    _vowels = set("AEIOUaeiou")
+
+    for idx, tok in enumerate(tokens):
+        clean = re.sub(r"[^A-Za-z]", "", tok)
+        if not clean:
+            break
+
+        # Indian DL names are printed in ALL CAPS. Any token containing lowercase letters is OCR noise (e.g. 'aver', 'sa', 'Sin', 'eo', 'ae', 'gern')
+        if any(c.islower() for c in tok) and len(clean) >= 2:
+            break
+
+        # Stop at consonant clusters with no standard vowels (e.g. MSS, WSS, CES, WY, AP, RS)
+        if len(clean) >= 2 and not any(c in _vowels for c in clean):
+            break
+
+        # Single letter initial (M, P, S, etc.)
+        if len(clean) == 1:
+            valid_name_tokens.append(clean.upper())
+            # If initial comes after a full word (e.g. "SANJAY M"), it completes the name
+            if len(valid_name_tokens) >= 2 and len(valid_name_tokens[-2]) > 1:
+                break
+        else:
+            valid_name_tokens.append(clean.upper())
+            if len(valid_name_tokens) >= 4:
+                break
+
+    return " ".join(valid_name_tokens).strip()
+
+
+def parse_driving_license(general_text):
+    """
+    Parse Driving License fields from OCR text.
+    """
+
+    general_text = normalize_text(general_text)
+    lines = [line.strip() for line in general_text.splitlines() if line.strip()]
+
+    fields = {
+        "dl_number": "",
+        "name": "",
+        "date_of_birth": "",
+        "relative_name": "",
+        "address": "",
+        "issue_date": "",
+        "validity_nt": "",
+        "validity_tr": "",
+        "date_of_first_issue": ""
+    }
+
+    DATE_RE = r"\d{2}[\-\/.]\d{2}[\-\/.]\d{4}"
+
+    # --------------------------------------------------------
+    # DL Number
+    # Handles: "TN72 20250006992", "TN7220250006992", "MH01-1234567890"
+    # --------------------------------------------------------
+
+    dl_match = re.search(
+        r"\b([A-Z]{2}\d{2})[\s\-]?(\d{7,11})\b",
+        general_text
+    )
+
+    if dl_match:
+        fields["dl_number"] = dl_match.group(1) + dl_match.group(2)
+    else:
+        dl_fallback = re.search(
+            r"\b([A-Z]{2}[0-9IOl]{2})[\s\-]?([0-9IOl]{7,11})\b",
+            general_text
+        )
+        if dl_fallback:
+            p1 = dl_fallback.group(1)[:2].upper()
+            p2 = dl_fallback.group(1)[2:].replace("I", "1").replace("O", "0").replace("l", "1")
+            num = dl_fallback.group(2).replace("I", "1").replace("O", "0").replace("l", "1")
+            fields["dl_number"] = p1 + p2 + num
+
+    # --------------------------------------------------------
+    # Name
+    # --------------------------------------------------------
+
+    # Find the line index of the Name label
+    name_label_idx = -1
+    name_candidates = []
+    for i, line in enumerate(lines):
+        if re.search(r"\bNAME\s*[:\-\.\s]?", line, re.IGNORECASE) and len(line) < 20:
+            name_label_idx = i
+            break
+        if re.search(r"\bNAME\b\s*[:\-\.]?", line, re.IGNORECASE):
+            # Same line check
+            m = re.search(r"\bNAME\s*[:\-\.]\s*([A-Za-z].*)", line, re.IGNORECASE)
+            if m:
+                cand = _extract_dl_name_tokens(m.group(1))
+                if len(cand) >= 2:
+                    name_candidates.append((cand, 10))
+            # Next lines check
+            for j in range(i + 1, min(i + 4, len(lines))):
+                cand_line = lines[j].strip()
+                if not cand_line:
+                    continue
+                if re.search(r"\b(DATE\s*OF\s*BIRTH|DOB|SON|DAUGHTER|WIFE|ADDRESS|BLOOD|ORGAN)\b", cand_line, re.IGNORECASE):
+                    break
+                cand = _extract_dl_name_tokens(cand_line)
+                if len(cand) >= 2:
+                    name_candidates.append((cand, 8))
+
+    if name_label_idx >= 0:
+        # Check same line after label
+        m = re.search(
+            r"\bNAME\s*[:\-\.]?\s+([A-Za-z][A-Za-z ]{1,30})",
+            lines[name_label_idx],
+            re.IGNORECASE
+        )
+        if m:
+            fields["name"] = normalize_name(m.group(1).strip())
+        else:
+            # Value on next line — collect leading name tokens
+            _name_stop = {
+                "HOLDER", "SIGNATURE", "DATE", "BLOOD", "ORGAN",
+                "DONOR", "GROUP", "ADDRESS", "SON", "DAUGHTER",
+                "WIFE", "VALIDITY", "ISSUE", "PDI"
+            }
+            for j in range(name_label_idx + 1, min(name_label_idx + 3, len(lines))):
+                raw = lines[j]
+                name_tokens = []
+                for token in raw.split():
+                    clean_tok = re.sub(r"[^A-Za-z]", "", token).upper()
+                    if clean_tok in _name_stop:
+                        break
+                    if re.match(r"^[A-Za-z'-]+$", token) and len(token) <= 20:
+                        name_tokens.append(token)
+                    else:
+                        break
+                if name_tokens:
+                    candidate = " ".join(name_tokens)
+                    if len(re.sub(r"[^A-Za-z]", "", candidate)) >= 2:
+                        fields["name"] = normalize_name(candidate)
+                        break
+    # Fallback: check lines immediately before Date of Birth
+    if not name_candidates:
+        for i, line in enumerate(lines):
+            if re.search(r"\b(?:DATE\s*OF\s*BIRTH|DOB)\b", line, re.IGNORECASE) and i > 0:
+                for j in range(i - 1, max(-1, i - 3), -1):
+                    prev = lines[j].strip()
+                    if not prev or re.search(r"\b(?:VALIDITY|ISSUE|LICENCE|LICENSE|GOVERNMENT|UNION|TAMIL|NADU|INDIAN)\b", prev, re.IGNORECASE):
+                        continue
+                    cand = _extract_dl_name_tokens(prev)
+                    if len(cand) >= 2:
+                        name_candidates.append((cand, 5))
+
+    if name_candidates:
+        def _score_name(item):
+            name, prio = item
+            words = name.split()
+            score = prio + len(name)
+            if len(words) >= 2:
+                score += 10
+                if any(len(w) == 1 for w in words):
+                    score += 5
+            return score
+        best_name = max(name_candidates, key=_score_name)
+        fields["name"] = best_name[0]
+
+    # --------------------------------------------------------
+    # Date of Birth
+    # --------------------------------------------------------
+
+    dob_match = re.search(
+        r"(?:DATE\s*OF\s*BIRTH|DOB)\s*[:\-]?\s*(" + DATE_RE + r")",
+        general_text,
+        re.IGNORECASE
+    )
+
+    if dob_match:
+        fields["date_of_birth"] = normalize_date(dob_match.group(1))
+
+    # --------------------------------------------------------
+    # Son/Daughter/Wife of  (Relative Name)
+    # --------------------------------------------------------
+
+    rel_candidates = []
+    for i, line in enumerate(lines):
+        if re.search(
+            r"(?:SON|DAUGHTER|WIFE)\s*/\s*(?:DAUGHTER|SON|WIFE)\s*/\s*(?:WIFE|SON|DAUGHTER)\s*OF|\bS/O\b|\bD/O\b|\bW/O\b",
+            line,
+            re.IGNORECASE
+        ):
+            # Check same line first
+            m = re.search(r"(?:S/O|D/O|W/O|SON\s*OF|DAUGHTER\s*OF|WIFE\s*OF)\s*[:\-]?\s*([A-Za-z].*)", line, re.IGNORECASE)
+            if m:
+                cand = _extract_dl_name_tokens(m.group(1))
+                if len(cand) >= 2:
+                    rel_candidates.append((cand, 10))
+            # Check next lines
+            for j in range(i + 1, min(i + 4, len(lines))):
+                cand_line = lines[j].strip()
+                if not cand_line:
+                    continue
+                if re.search(r"\b(ADDRESS|DATE|DOB|BLOOD|ORGAN)\b", cand_line, re.IGNORECASE):
+                    break
+                cand = _extract_dl_name_tokens(cand_line)
+                if len(cand) >= 2:
+                    rel_candidates.append((cand, 8))
+
+    if rel_candidates:
+        def _score_rel(item):
+            name, prio = item
+            words = name.split()
+            score = prio + len(name)
+            if len(words) >= 2:
+                score += 10
+                if any(len(w) == 1 for w in words):
+                    score += 5
+            return score
+        best_rel = max(rel_candidates, key=_score_rel)
+        fields["relative_name"] = best_rel[0]
+
+    # --------------------------------------------------------
+    # Address  (everything after "Address:" until noise/end)
+    # Only accept lines that look like real address content.
+    # --------------------------------------------------------
+    # Address
+    # --------------------------------------------------------
+
+    def _is_address_line(ln):
+        if re.search(r"\d", ln):
+            return True
+        if re.search(
+            r"\b(STREET|NAGAR|ROAD|COLONY|DISTRICT|TALUK|WARD|"
+            r"TIRUNELVELI|PALAYAMKOTTAI|TAMIL|NADU|CHENNAI|"
+            r"TIRUNELVELI|PALAYAMKOTTAI|PALAYANKOTTAI|TAMIL|NADU|CHENNAI|"
+            r"COIMBATORE|MADURAI|TRICHY|SALEM|VELI|KOTTAI)\b",
+            ln, re.IGNORECASE
+        ):
+            return True
+        return False
+
+    # --------------------------------------------------------
+    # Address
+    # --------------------------------------------------------
+
+    def _is_address_line(ln):
+        if re.search(r"\d", ln):
+            return True
+        if re.search(
+            r"\b(STREET|NAGAR|ROAD|COLONY|DISTRICT|TALUK|WARD|"
+            r"TIRUNELVELI|PALAYAMKOTTAI|PALAYANKOTTAI|TAMIL|NADU|CHENNAI|"
+            r"COIMBATORE|MADURAI|TRICHY|SALEM|VELI|KOTTAI)\b",
+            ln, re.IGNORECASE
+        ):
+            return True
+        return False
+
+    for i, line in enumerate(lines):
+        if re.search(r"\b(?:ADDRESS|Add(?:ress)?)\s*[:\-]?\s*", line, re.IGNORECASE):
+            addr_lines = []
+            m = re.match(r"(?:ADDRESS|Add(?:ress)?)\s*[:\-]\s*(.+)", line, re.IGNORECASE)
+            if m and _is_address_line(m.group(1).strip()):
+                addr_lines.append(m.group(1).strip())
+            for addr_line in lines[i + 1:]:
+                if re.search(r"\b(PDI|PD[I1]|HOLDER|SIGNATURE|DATE\s*OF\s*FIRST|ISSUE\s*DATE|VALIDITY|GOVERNMENT|UNION|LICENCE|LICENSE|NAME)\b", addr_line, re.IGNORECASE):
+                    break
+                if _is_address_line(addr_line):
+                    cleaned_al = re.sub(r"[\~\|\%\$\_\*\:]+", "", addr_line).strip()
+                    cleaned_al = re.sub(r"\b(?:cos\s*\d+|WING,?\s*[a-z]|al|ss|x\.|gf|Far)\b", "", cleaned_al, flags=re.IGNORECASE).strip()
+                    if cleaned_al:
+                        addr_lines.append(cleaned_al)
+                    if re.search(r"\b\d{6}\b", addr_line):
+                        break
+            if addr_lines:
+                seen_parts = set()
+                final_parts = []
+                for p in addr_lines:
+                    p_norm = p.upper().strip()
+                    if p_norm not in seen_parts:
+                        seen_parts.add(p_norm)
+                        final_parts.append(p)
+                fields["address"] = re.sub(r"\s+", " ", " ".join(final_parts)).strip()
+                break
+
+    # --------------------------------------------------------
+    # Issue Date / Validity NT / Validity TR
+    # --------------------------------------------------------
+
+    for i, line in enumerate(lines):
+        has_issue = bool(re.search(r"\bISSUE\s*DATE\b", line, re.IGNORECASE))
+        has_nt    = bool(re.search(r"VALIDITY\s*\(?NT\)?", line, re.IGNORECASE))
+
+        if has_issue or has_nt:
+            search_lines = [line]
+            if i + 1 < len(lines):
+                search_lines.append(lines[i + 1])
+            if i + 2 < len(lines):
+                search_lines.append(lines[i + 2])
+            combined = " ".join(search_lines)
+            dates = re.findall(DATE_RE, combined)
+
+            if len(dates) >= 1:
+                fields["issue_date"] = normalize_date(dates[0])
+            if len(dates) >= 2:
+                fields["validity_nt"] = normalize_date(dates[1])
+            if len(dates) >= 3:
+                fields["validity_tr"] = normalize_date(dates[2])
+            if fields["issue_date"]:
+                break
+
+    # Validity TR standalone fallback
+    if not fields["validity_tr"]:
+        tr_match = re.search(
+            r"VALIDITY\s*\(?TR\)?\s*[:\-]?\s*(" + DATE_RE + r")",
+            general_text, re.IGNORECASE
+        )
+        if tr_match:
+            fields["validity_tr"] = normalize_date(tr_match.group(1))
+
+    # --------------------------------------------------------
+    # Date of First Issue
+    # --------------------------------------------------------
+
+    fi_match = re.search(
+        r"DATE\s*OF\s*FIRST\s*ISSUE\s*[:\-]?\s*(" + DATE_RE + r")",
+        general_text,
+        re.IGNORECASE
+    )
+
+    if fi_match:
+        fields["date_of_first_issue"] = normalize_date(fi_match.group(1))
+
+    if not fields["date_of_first_issue"]:
+        all_dates = re.findall(DATE_RE, general_text)
+        assigned = set(filter(None, [
+            fields["issue_date"],
+            fields["validity_nt"],
+            fields["validity_tr"],
+            fields["date_of_birth"]
+        ]))
+        for d in reversed(all_dates):
+            norm = normalize_date(d)
+            if norm not in assigned:
+                fields["date_of_first_issue"] = norm
+                break
+
+    if not fields["date_of_first_issue"] and fields["issue_date"]:
+        fields["date_of_first_issue"] = fields["issue_date"]
+
+    return fields
+
+
+# ============================================================
 # MAIN DOCUMENT PARSER
 # ============================================================
 
@@ -2262,6 +2666,22 @@ def parse_document(
         fields = parse_aadhaar(
             general_text,
             aadhaar_text
+        )
+
+    # ========================================================
+    # DRIVING LICENSE
+    # ========================================================
+
+    elif document_type == "driving_license":
+
+        combined_dl_text = general_text
+        if isinstance(ocr_result, dict):
+            overall_text = ocr_result.get("text", "")
+            if overall_text and overall_text not in combined_dl_text:
+                combined_dl_text = combined_dl_text + "\n" + overall_text
+
+        fields = parse_driving_license(
+            combined_dl_text or general_text
         )
 
     # ========================================================

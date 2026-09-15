@@ -9,6 +9,7 @@ from services.document_parser import parse_document
 from services.validation import (
     validate_passport,
     validate_aadhaar,
+    validate_driving_license,
     validate_document_structure,
     calculate_document_score,
     cross_document_validation
@@ -196,6 +197,14 @@ def process_document(file):
                 )
             )
 
+        elif document_type == "driving_license":
+
+            field_validation = (
+                validate_driving_license(
+                    fields
+                )
+            )
+
         else:
 
             field_validation = {}
@@ -293,7 +302,7 @@ def process_document(file):
 
 
 # ============================================================
-# VERIFY PASSPORT + AADHAAR
+# VERIFY PASSPORT + AADHAAR / DRIVING LICENSE
 # ============================================================
 
 @app.route(
@@ -320,6 +329,15 @@ def verify_documents():
             )
         )
 
+        dl_file = (
+            request.files.get(
+                "driving_license"
+            )
+        )
+
+        id_file = aadhaar_file or dl_file
+        id_key = "aadhaar" if aadhaar_file else "driving_license"
+
 
         # ----------------------------------------------------
         # Check Passport
@@ -338,17 +356,17 @@ def verify_documents():
 
 
         # ----------------------------------------------------
-        # Check Aadhaar
+        # Check ID document
         # ----------------------------------------------------
 
-        if aadhaar_file is None:
+        if id_file is None:
 
             return jsonify({
 
                 "success": False,
 
                 "message":
-                    "Aadhaar image is required"
+                    "Aadhaar or Driving License image is required"
 
             }), 400
 
@@ -365,12 +383,12 @@ def verify_documents():
 
 
         # ====================================================
-        # PROCESS AADHAAR
+        # PROCESS ID DOCUMENT
         # ====================================================
 
-        aadhaar_result = (
+        id_result = (
             process_document(
-                aadhaar_file
+                id_file
             )
         )
 
@@ -381,15 +399,9 @@ def verify_documents():
 
         cross_validation = (
             cross_document_validation(
-
-                passport_result[
-                    "fields"
-                ],
-
-                aadhaar_result[
-                    "fields"
-                ]
-
+                passport_result["fields"],
+                id_result["fields"],
+                id_key
             )
         )
 
@@ -398,20 +410,15 @@ def verify_documents():
         # FINAL RESPONSE
         # ====================================================
 
-        return jsonify({
+        response_data = {
+            "success": True,
+            "passport": passport_result,
+            "cross_document_validation": cross_validation
+        }
 
-            "success":
-                True,
+        response_data[id_key] = id_result
 
-            "passport":
-                passport_result,
-
-            "aadhaar":
-                aadhaar_result,
-
-            "cross_document_validation":
-                cross_validation
-        })
+        return jsonify(response_data)
 
 
     except Exception as error:

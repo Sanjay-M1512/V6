@@ -479,6 +479,83 @@ def validate_aadhaar(fields):
 
 
 # ============================================================
+# DRIVING LICENSE VALIDATION
+# ============================================================
+
+def validate_driving_license(fields):
+    """
+    Validate extracted Driving License fields.
+    """
+
+    validation = {}
+
+    dl_number = fields.get("dl_number", "")
+    name = fields.get("name", "")
+    dob = fields.get("date_of_birth", "")
+    issue_date = fields.get("issue_date", "")
+    validity_nt = fields.get("validity_nt", "")
+    validity_tr = fields.get("validity_tr", "")
+    date_of_first_issue = fields.get("date_of_first_issue", "")
+
+    # DL Number: e.g. MH01-1234567890
+    dl_valid = bool(
+        re.fullmatch(
+            r"[A-Z]{2}\d{2}[\-]?\d{7,11}",
+            str(dl_number).upper().strip()
+        )
+    )
+
+    validation["dl_number"] = {
+        "valid": dl_valid,
+        "message": "Valid DL number format" if dl_valid else "Invalid DL number format"
+    }
+
+    name_valid = is_valid_name(name)
+
+    validation["name"] = {
+        "valid": name_valid,
+        "message": "Valid name" if name_valid else "Invalid or missing name"
+    }
+
+    dob_valid = is_valid_date(dob)
+
+    validation["date_of_birth"] = {
+        "valid": dob_valid,
+        "message": "Valid date of birth" if dob_valid else "Invalid or missing date of birth"
+    }
+
+    issue_valid = is_valid_date(issue_date)
+
+    validation["issue_date"] = {
+        "valid": issue_valid,
+        "message": "Valid issue date" if issue_valid else "Invalid or missing issue date"
+    }
+
+    nt_valid = not validity_nt or is_valid_date(validity_nt)
+
+    validation["validity_nt"] = {
+        "valid": nt_valid,
+        "message": "Valid NT validity" if nt_valid else "Invalid NT validity date"
+    }
+
+    tr_valid = not validity_tr or is_valid_date(validity_tr)
+
+    validation["validity_tr"] = {
+        "valid": tr_valid,
+        "message": "Valid TR validity" if tr_valid else "Invalid TR validity date"
+    }
+
+    fi_valid = not date_of_first_issue or is_valid_date(date_of_first_issue)
+
+    validation["date_of_first_issue"] = {
+        "valid": fi_valid,
+        "message": "Valid date of first issue" if fi_valid else "Invalid date of first issue"
+    }
+
+    return validation
+
+
+# ============================================================
 # DOCUMENT STRUCTURE VALIDATION
 # ============================================================
 
@@ -525,6 +602,19 @@ def validate_document_structure(
             "date_of_birth",
 
             "gender"
+        ]
+
+    elif document_type == "driving_license":
+
+        required_fields = [
+
+            "dl_number",
+
+            "name",
+
+            "date_of_birth",
+
+            "issue_date"
         ]
 
     else:
@@ -1028,19 +1118,20 @@ def compare_fields(
 
 def cross_document_validation(
     passport_fields,
-    aadhaar_fields
+    id_fields,
+    id_type="aadhaar"
 ):
     """
     Compare common identity fields between:
 
         Passport
-        Aadhaar
+        Aadhaar  OR  Driving License
 
     Compared fields:
 
         Name
         Date of Birth
-        Sex / Gender
+        Sex / Gender  (Aadhaar only)
     """
 
     # ========================================================
@@ -1064,48 +1155,15 @@ def cross_document_validation(
         )
     )
 
-    aadhaar_name = (
-        aadhaar_fields.get(
-            "name",
-            ""
-        )
-    )
+    id_name = id_fields.get("name", "")
 
     # ========================================================
     # DATE OF BIRTH
     # ========================================================
 
-    passport_dob = (
-        passport_fields.get(
-            "date_of_birth",
-            ""
-        )
-    )
+    passport_dob = passport_fields.get("date_of_birth", "")
 
-    aadhaar_dob = (
-        aadhaar_fields.get(
-            "date_of_birth",
-            ""
-        )
-    )
-
-    # ========================================================
-    # GENDER
-    # ========================================================
-
-    passport_sex = (
-        passport_fields.get(
-            "sex",
-            ""
-        )
-    )
-
-    aadhaar_gender = (
-        aadhaar_fields.get(
-            "gender",
-            ""
-        )
-    )
+    id_dob = id_fields.get("date_of_birth", "")
 
     # ========================================================
     # COMPARE NAME
@@ -1113,7 +1171,7 @@ def cross_document_validation(
 
     name_result = compare_names(
         passport_name,
-        aadhaar_name
+        id_name
     )
 
     # ========================================================
@@ -1122,33 +1180,27 @@ def cross_document_validation(
 
     dob_result = compare_fields(
         passport_dob,
-        aadhaar_dob
+        id_dob
     )
-
-    # ========================================================
-    # COMPARE GENDER
-    # ========================================================
-
-    gender_result = compare_genders(
-        passport_sex,
-        aadhaar_gender
-    )
-
-    # ========================================================
-    # RESULTS
-    # ========================================================
 
     results = {
-
-        "name":
-            name_result,
-
-        "date_of_birth":
-            dob_result,
-
-        "gender":
-            gender_result
+        "name": name_result,
+        "date_of_birth": dob_result
     }
+
+    # ========================================================
+    # GENDER (Aadhaar only)
+    # ========================================================
+
+    if id_type == "aadhaar":
+
+        passport_sex = passport_fields.get("sex", "")
+        aadhaar_gender = id_fields.get("gender", "")
+
+        results["gender"] = compare_genders(
+            passport_sex,
+            aadhaar_gender
+        )
 
     # ========================================================
     # OVERALL RESULT

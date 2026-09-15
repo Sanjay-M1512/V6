@@ -275,9 +275,23 @@ def perform_general_ocr(
             "variant": variant_name
         })
 
-    return select_best_result(
+    best = select_best_result(
         results
     )
+
+    combined_texts = []
+    if best and best.get("text"):
+        combined_texts.append(best["text"].strip())
+
+    for r in results:
+        t = r.get("text", "").strip()
+        if t and t not in combined_texts:
+            combined_texts.append(t)
+
+    if best:
+        best["text"] = "\n".join(combined_texts)
+
+    return best
 
 
 # ============================================================
