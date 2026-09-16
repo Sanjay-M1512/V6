@@ -533,6 +533,17 @@
                 <input type="file" id="driving_license" accept="image/*" style="display:none;">
             </div>
 
+        <!-- Officer Biometric Verification (Module 2) -->
+        <div class="form-card" style="margin-top:20px;">
+            <h2>Officer Biometric Verification (Module 2)</h2>
+            <p style="font-size:13px; color:#666; margin-bottom:12px;">
+                Upload the officer's newly scanned fingerprint file (<code>.firpiv</code>) to perform cross-layer identity matching and simulated blockchain integrity hash verification against the enrolled record in Firebase.
+            </p>
+            <label>Fingerprint File (.firpiv)</label>
+            <input type="file" id="verify-fingerprint" accept=".firpiv">
+            <p style="font-size:12px; color:#888; margin-top:4px;">
+                Optional — If omitted, only Module 1 document validation & cross-check will be run.
+            </p>
         </div>
 
         <button class="action-button" id="verifyButton" onclick="verifyDocuments()">
@@ -801,6 +812,11 @@ async function verifyDocuments() {
         formData.append("passport", passportFile);
         formData.append(idDocType, idFile);
 
+        const fpInput = document.getElementById("verify-fingerprint");
+        if (fpInput && fpInput.files && fpInput.files[0]) {
+            formData.append("fingerprint_file", fpInput.files[0]);
+        }
+
         const response = await fetch("/api/verify", {
             method: "POST",
             body: formData
@@ -808,7 +824,7 @@ async function verifyDocuments() {
 
         const data = await response.json();
 
-        if (!response.ok || !data.success) {
+        if (!response.ok && !data.verification) {
             throw new Error(data.message || "Verification failed");
         }
 
@@ -830,6 +846,10 @@ function displayVerifyResults(data) {
     const results = document.getElementById("verifyResults");
     results.innerHTML = "";
 
+    if (data.verification) {
+        results.innerHTML += createOfficerVerificationResult(data);
+    }
+
     if (data.passport)
         results.innerHTML += createDocumentResult("Passport", data.passport);
 
@@ -841,6 +861,83 @@ function displayVerifyResults(data) {
 
     if (data.cross_document_validation)
         results.innerHTML += createCrossValidationResult(data.cross_document_validation);
+}
+
+
+function createOfficerVerificationResult(data) {
+    const v = data.verification || {};
+    const isVerified = v.final_status === "VERIFIED";
+    const statusClass = isVerified ? "match" : "mismatch";
+    const statusBg = isVerified ? "#ecfdf5" : "#fef2f2";
+    const statusBorder = isVerified ? "#10b981" : "#ef4444";
+
+    let html = `
+        <div class="result-card" style="border: 2px solid ${statusBorder}; background: ${statusBg}; margin-bottom: 20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
+                <h3 style="margin-bottom:0; color: #111;">Module 2 — Officer Verification Result</h3>
+                <span class="${statusClass}" style="font-size:16px; padding:6px 14px; border-radius:6px; background:white; border: 1px solid #ddd;">
+                    ${v.final_status || "UNKNOWN"}
+                </span>
+            </div>
+    `;
+
+    if (data.reason) {
+        html += `
+            <div style="padding:10px 14px; background:#fee2e2; border-radius:6px; color:#b91c1c; font-weight:bold; margin-bottom:12px;">
+                Reason: ${data.reason}
+            </div>
+        `;
+    }
+
+    if (data.identity) {
+        html += `
+            <div class="validation">
+                <h4>Enrolled Identity Information</h4>
+                <div class="field">
+                    <span class="field-name">National ID</span>
+                    <span style="font-weight:bold;">${data.identity.national_id || "N/A"}</span>
+                </div>
+                <div class="field">
+                    <span class="field-name">Name</span>
+                    <span>${data.identity.name || "N/A"}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    if (data.fingerprint) {
+        const fpMatch = data.fingerprint.match;
+        const fpScore = data.fingerprint.score !== undefined ? Number(data.fingerprint.score).toFixed(4) : "N/A";
+        html += `
+            <div class="validation">
+                <h4>Biometric Fingerprint Match</h4>
+                <div class="field">
+                    <span class="field-name">Fingerprint Result</span>
+                    <span class="${fpMatch ? 'match' : 'mismatch'}">${fpMatch ? "MATCHED (✓)" : "MISMATCH (✗)"}</span>
+                </div>
+                <div class="field">
+                    <span class="field-name">Match Score</span>
+                    <span>${fpScore}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    if (data.integrity) {
+        const hashMatch = data.integrity.hash_match;
+        html += `
+            <div class="validation">
+                <h4>Simulated Blockchain Integrity Check</h4>
+                <div class="field">
+                    <span class="field-name">Record Hash Verification</span>
+                    <span class="${hashMatch ? 'match' : 'mismatch'}">${hashMatch ? "VALID (Hash Matched ✓)" : "TAMPERED / MISMATCH (✗)"}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    html += `</div>`;
+    return html;
 }
 
 

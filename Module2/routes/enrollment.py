@@ -308,3 +308,85 @@ def enroll():
             "message": "Enrollment failed",
             "error":   str(e)
         }), 500
+
+
+# ============================================================
+# POST /api/verify-identity
+# ============================================================
+
+@enrollment_bp.route("/verify-identity", methods=["POST"])
+def verify_identity_endpoint():
+    """
+    Dedicated Module 2 identity verification endpoint.
+    Accepts multipart/form-data or JSON with:
+        passport_no: string (or 'passport' image)
+        aadhaar_no or dl_no or second_doc_no: string
+        fingerprint_file: .firpiv file
+    """
+    try:
+        from Module2.services.verification_service import verify_identity_workflow
+
+        passport_no = None
+        second_doc_no = None
+        second_doc_type = None
+
+        # Check JSON first if applicable
+        if request.is_json:
+            data = request.get_json() or {}
+            passport_no = data.get("passport_no")
+            second_doc_no = data.get("aadhaar_no") or data.get("dl_no") or data.get("second_doc_no")
+            second_doc_type = "aadhaar" if data.get("aadhaar_no") else ("driving_license" if data.get("dl_no") else "second_doc")
+
+        # Or read from form fields
+        if not passport_no:
+            passport_no = request.form.get("passport_no", "").strip()
+        if not second_doc_no:
+            if request.form.get("aadhaar_no"):
+                second_doc_no = request.form.get("aadhaar_no", "").strip()
+                second_doc_type = "aadhaar"
+            elif request.form.get("dl_no"):
+                second_doc_no = request.form.get("dl_no", "").strip()
+                second_doc_type = "driving_license"
+            elif request.form.get("second_doc_no"):
+                second_doc_no = request.form.get("second_doc_no", "").strip()
+                second_doc_type = request.form.get("second_doc_type", "second_doc").strip()
+
+        # Read fingerprint file
+        fp_file = request.files.get("fingerprint_file") or request.files.get("fingerprint")
+        if not fp_file or not fp_file.filename:
+            return jsonify({
+                "success": False,
+                "verification": {
+                    "identity_found": False,
+                    "fingerprint_match": False,
+                    "hash_match": False,
+                    "final_status": "NOT_VERIFIED"
+                },
+                "reason": "fingerprint_file (.firpiv) is required"
+            }), 400
+
+        fp_bytes = fp_file.read()
+
+        result, status_code = verify_identity_workflow(
+            passport_number=passport_no,
+            second_doc_number=second_doc_no,
+            second_doc_type=second_doc_type,
+            officer_firpiv_bytes=fp_bytes
+        )
+
+        return jsonify(result), status_code
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "verification": {
+                "identity_found": False,
+                "fingerprint_match": False,
+                "hash_match": False,
+                "final_status": "NOT_VERIFIED"
+            },
+            "reason": f"Verification error: {str(e)}"
+        }), 500
+

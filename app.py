@@ -16,6 +16,7 @@ from Module1.services.validation import (
     cross_document_validation
 )
 from Module2.routes.enrollment import enrollment_bp
+from Module2.services.verification_service import verify_identity_workflow
 from Module3.app import biometrics_bp, OUTPUT_FOLDER as MOD3_OUTPUT_FOLDER
 from Module3.services.face_input import process_face_file
 
@@ -252,6 +253,44 @@ def verify_documents():
         }
 
         response_data[id_key] = id_result
+
+        # ----------------------------------------------------
+        # MODULE 2 — OFFICER BIOMETRIC & INTEGRITY VERIFICATION
+        # If officer uploads a .firpiv fingerprint, run verification
+        # ----------------------------------------------------
+        officer_fp_file = (
+            request.files.get("fingerprint_file")
+            or request.files.get("fingerprint")
+        )
+
+        if officer_fp_file and officer_fp_file.filename:
+            fp_bytes = officer_fp_file.read()
+
+            passport_no = passport_result.get("fields", {}).get("passport_number")
+            second_doc_no = (
+                id_result.get("fields", {}).get("aadhaar_number")
+                if id_key == "aadhaar"
+                else id_result.get("fields", {}).get("dl_number")
+            )
+
+            verif_res, verif_code = verify_identity_workflow(
+                passport_number=passport_no,
+                second_doc_number=second_doc_no,
+                second_doc_type=id_key,
+                officer_firpiv_bytes=fp_bytes
+            )
+
+            response_data["verification"] = verif_res.get("verification")
+            if "reason" in verif_res:
+                response_data["reason"] = verif_res["reason"]
+            if "identity" in verif_res:
+                response_data["identity"] = verif_res["identity"]
+            if "fingerprint" in verif_res:
+                response_data["fingerprint"] = verif_res["fingerprint"]
+            if "integrity" in verif_res:
+                response_data["integrity"] = verif_res["integrity"]
+
+            return jsonify(response_data), verif_code
 
         return jsonify(response_data)
 
