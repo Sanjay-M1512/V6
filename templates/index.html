@@ -1,0 +1,1556 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Identity Verification System</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            color: #222;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 960px;
+            margin: auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        /* -------------------------------------------------- */
+        /* TAB NAV                                             */
+        /* -------------------------------------------------- */
+
+        .tab-nav {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .tab-btn {
+            padding: 10px 28px;
+            border: 2px solid #1f6feb;
+            border-radius: 6px;
+            background: white;
+            color: #1f6feb;
+            font-size: 15px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .tab-btn.active {
+            background: #1f6feb;
+            color: white;
+        }
+
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        /* -------------------------------------------------- */
+        /* CARDS                                               */
+        /* -------------------------------------------------- */
+
+        .upload-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .upload-card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+        }
+
+        .upload-card h2 {
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+
+        .form-card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+
+        .form-card h2 {
+            margin-bottom: 18px;
+            font-size: 20px;
+        }
+
+        /* -------------------------------------------------- */
+        /* INPUTS                                              */
+        /* -------------------------------------------------- */
+
+        input[type="file"],
+        input[type="text"],
+        input[type="date"],
+        input[type="tel"],
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-top: 6px;
+        }
+
+        label {
+            font-size: 14px;
+            font-weight: bold;
+            display: block;
+            margin-top: 14px;
+        }
+
+        label:first-child {
+            margin-top: 0;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        /* -------------------------------------------------- */
+        /* DOCUMENT ROWS (enroll)                              */
+        /* -------------------------------------------------- */
+
+        .doc-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .doc-row select {
+            padding: 9px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+            width: 180px;
+        }
+
+        .doc-row input[type="text"] {
+            margin-top: 0;
+            flex: 1;
+        }
+
+        .doc-row button {
+            padding: 9px 14px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        #addDocBtn {
+            margin-top: 12px;
+            padding: 8px 16px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        /* -------------------------------------------------- */
+        /* BUTTONS                                             */
+        /* -------------------------------------------------- */
+
+        .action-button {
+            display: block;
+            width: 100%;
+            margin-top: 25px;
+            padding: 14px;
+            border: none;
+            border-radius: 6px;
+            background: #1f6feb;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .action-button:hover {
+            background: #1557b0;
+        }
+
+        .action-button:disabled {
+            background: #999;
+            cursor: not-allowed;
+        }
+
+        /* -------------------------------------------------- */
+        /* STATUS & RESULTS                                    */
+        /* -------------------------------------------------- */
+
+        .status {
+            margin-top: 25px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            display: none;
+            border: 1px solid #ddd;
+        }
+
+        .result-section {
+            margin-top: 25px;
+        }
+
+        .result-card {
+            background: white;
+            padding: 20px;
+            margin-top: 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+        .result-card h3 {
+            margin-bottom: 15px;
+        }
+
+        .field {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .field-name {
+            font-weight: bold;
+        }
+
+        .match {
+            color: green;
+            font-weight: bold;
+        }
+
+        .mismatch {
+            color: red;
+            font-weight: bold;
+        }
+
+        .validation {
+            margin-top: 15px;
+        }
+
+        .validation-item {
+            padding: 8px 0;
+        }
+
+        .enroll-result {
+            background: #eafaf1;
+            border: 1px solid #27ae60;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .enroll-result h3 {
+            color: #1e8449;
+            margin-bottom: 12px;
+        }
+
+        .enroll-result .field {
+            border-bottom: 1px solid #c8e6c9;
+        }
+
+        /* -------------------------------------------------- */
+        /* MODULE 3 — BIOMETRICS STYLES                        */
+        /* -------------------------------------------------- */
+
+        .sec-button {
+            padding: 10px 18px;
+            background: #475569;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 4px 4px 4px 0;
+        }
+
+        .sec-button:hover {
+            background: #334155;
+        }
+
+        .verify-btn-green {
+            display: block;
+            width: 100%;
+            margin-top: 15px;
+            padding: 14px;
+            border: none;
+            border-radius: 6px;
+            background: #059669;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .verify-btn-green:hover {
+            background: #047857;
+        }
+
+        .verify-btn-green:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        .mod3-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .mod3-item {
+            background: #f8fafc;
+            padding: 10px 12px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .mod3-item strong {
+            display: block;
+            margin-bottom: 4px;
+            color: #475569;
+            font-size: 12px;
+        }
+
+        .face-preview-box {
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        .face-preview-box img {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px solid #1f6feb;
+            margin-top: 6px;
+        }
+
+        .status-pass {
+            color: #15803d;
+            font-weight: bold;
+        }
+
+        .status-low {
+            color: #dc2626;
+            font-weight: bold;
+        }
+
+        .status-uncertain {
+            color: #d97706;
+            font-weight: bold;
+        }
+
+        .camera-container {
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        #camera {
+            width: 100%;
+            max-width: 560px;
+            height: auto;
+            background: #000;
+            border-radius: 10px;
+            margin: 10px auto;
+            display: none;
+        }
+
+        #cameraCanvas {
+            display: none;
+        }
+
+        .blink-instruction {
+            margin-top: 15px;
+            padding: 14px;
+            border-radius: 8px;
+            background: #fff7ed;
+            border-left: 5px solid #f97316;
+            font-size: 16px;
+            font-weight: bold;
+            display: none;
+        }
+
+        .blink-status {
+            margin-top: 12px;
+            padding: 12px;
+            border-radius: 6px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            font-size: 15px;
+            display: none;
+        }
+
+        .blink-success {
+            color: #15803d;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .blink-waiting {
+            color: #d97706;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .match-box {
+            margin-top: 15px;
+            padding: 18px;
+            border-radius: 8px;
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+        }
+
+        .match-box.fail {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+        }
+
+        .match-decision-text {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        @media (max-width: 700px) {
+            .upload-section,
+            .form-row,
+            .mod3-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+
+<body>
+
+<div class="container">
+
+    <h1>Identity Verification System</h1>
+
+    <p class="subtitle">Passport · Aadhaar · Driving License · Enrollment</p>
+
+
+    <!-- ================================================
+         TAB NAVIGATION
+    ================================================= -->
+
+    <div class="tab-nav">
+        <button class="tab-btn active" onclick="switchTab('verify')">
+            Module 1 — Verify
+        </button>
+        <button class="tab-btn" onclick="switchTab('enroll')">
+            Module 2 — Enroll
+        </button>
+        <button class="tab-btn" onclick="switchTab('biometrics')">
+            Module 3 — Biometrics
+        </button>
+    </div>
+
+
+    <!-- ================================================
+         MODULE 1 — VERIFY
+    ================================================= -->
+
+    <div class="tab-panel active" id="tab-verify">
+
+        <div class="upload-section">
+
+            <!-- Passport -->
+
+            <div class="upload-card">
+                <h2>Passport</h2>
+                <input type="file" id="passport" accept="image/*">
+            </div>
+
+
+            <!-- Aadhaar / Driving License -->
+
+            <div class="upload-card">
+                <h2>ID Document</h2>
+
+                <div style="margin-bottom:12px;">
+                    <label style="display:inline; font-weight:normal; margin-right:16px;">
+                        <input
+                            type="radio"
+                            name="idDocType"
+                            value="aadhaar"
+                            checked
+                            onchange="switchIdDoc(this.value)"
+                        > Aadhaar
+                    </label>
+                    <label style="display:inline; font-weight:normal;">
+                        <input
+                            type="radio"
+                            name="idDocType"
+                            value="driving_license"
+                            onchange="switchIdDoc(this.value)"
+                        > Driving License
+                    </label>
+                </div>
+
+                <input type="file" id="aadhaar" accept="image/*">
+                <input type="file" id="driving_license" accept="image/*" style="display:none;">
+            </div>
+
+        </div>
+
+        <button class="action-button" id="verifyButton" onclick="verifyDocuments()">
+            Verify Documents
+        </button>
+
+        <div class="status" id="verifyStatus"></div>
+
+        <div class="result-section" id="verifyResults"></div>
+
+    </div>
+
+
+    <!-- ================================================
+         MODULE 2 — ENROLL
+    ================================================= -->
+
+    <div class="tab-panel" id="tab-enroll">
+
+        <!-- Personal Details -->
+
+        <div class="form-card">
+            <h2>Personal Details</h2>
+
+            <div class="form-row">
+                <div>
+                    <label>Full Name</label>
+                    <input type="text" id="enroll-name" placeholder="e.g. JOHN DOE">
+                </div>
+                <div>
+                    <label>Date of Birth</label>
+                    <input type="date" id="enroll-dob">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div>
+                    <label>Contact Number</label>
+                    <input type="tel" id="enroll-contact" placeholder="e.g. 9876543210">
+                </div>
+                <div>
+                    <label>Nationality</label>
+                    <input type="text" id="enroll-nationality" placeholder="e.g. INDIAN">
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Passport -->
+
+        <div class="form-card">
+            <h2>Passport</h2>
+            <label>Passport Number</label>
+            <input type="text" id="enroll-passport" placeholder="e.g. A1234567">
+        </div>
+
+
+        <!-- ID Documents -->
+
+        <div class="form-card">
+            <h2>ID Documents</h2>
+            <p style="font-size:13px; color:#666; margin-bottom:8px;">
+                Add at least one — Aadhaar or Driving License.
+            </p>
+
+            <div id="docRows"></div>
+
+            <button id="addDocBtn" onclick="addDocRow()">+ Add Document</button>
+        </div>
+
+
+        <!-- Fingerprint -->
+
+        <div class="form-card">
+            <h2>Fingerprint</h2>
+            <label>Upload FIRPIV File (.firpiv)</label>
+            <input type="file" id="enroll-fingerprint" accept=".firpiv">
+            <p style="font-size:12px; color:#888; margin-top:6px;">
+                ISO/IEC 19794-4 FIR format — WSQ compressed fingerprint image record
+            </p>
+        </div>
+
+
+        <button class="action-button" id="enrollButton" onclick="enrollPerson()">
+            Enroll Person
+        </button>
+
+        <div class="status" id="enrollStatus"></div>
+
+        <div id="enrollResult"></div>
+
+    </div>
+
+
+    <!-- ================================================
+         MODULE 3 — BIOMETRICS
+    ================================================= -->
+
+    <div class="tab-panel" id="tab-biometrics">
+
+        <!-- 1. Document Face Inputs -->
+        <div class="upload-section">
+
+            <!-- Passport Face Card -->
+            <div class="upload-card">
+                <h2>Passport Face</h2>
+                <p style="font-size:13px; color:#666; margin-bottom:12px;">
+                    Upload full passport or cropped face image. Automatic detection & quality scoring.
+                </p>
+                <input type="file" id="mod3-passport-input" accept="image/*">
+                <button class="sec-button" id="mod3PassportBtn" onclick="uploadMod3Passport()" style="width:100%; background:#1f6feb;">
+                    Extract & Validate Passport Face
+                </button>
+                <div id="mod3PassportResult"></div>
+            </div>
+
+            <!-- Aadhaar / Driving License Face Card -->
+            <div class="upload-card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <h2>Second ID Face</h2>
+                    <div style="font-size:13px;">
+                        <label style="display:inline; font-weight:normal; margin-right:8px;">
+                            <input type="radio" name="mod3IdType" value="aadhaar" checked onchange="switchMod3IdDoc(this.value)"> Aadhaar
+                        </label>
+                        <label style="display:inline; font-weight:normal;">
+                            <input type="radio" name="mod3IdType" value="driving_license" onchange="switchMod3IdDoc(this.value)"> Driving License
+                        </label>
+                    </div>
+                </div>
+                <p style="font-size:13px; color:#666; margin-bottom:12px;" id="mod3SecondDocDesc">
+                    Upload full Aadhaar or cropped face image. Automatic detection & quality scoring.
+                </p>
+                <input type="file" id="mod3-aadhaar-input" accept="image/*">
+                <input type="file" id="mod3-dl-input" accept="image/*" style="display:none;">
+                <button class="sec-button" id="mod3SecondBtn" onclick="uploadMod3SecondDoc()" style="width:100%; background:#1f6feb;">
+                    Extract & Validate ID Face
+                </button>
+                <div id="mod3SecondResult"></div>
+            </div>
+
+        </div>
+
+        <!-- 2. Passport ↔ ID Document Face Comparison Card -->
+        <div class="form-card" style="margin-top:20px;">
+            <h2>Passport ↔ ID Face Comparison</h2>
+            <p style="font-size:13px; color:#666; margin-bottom:14px;">
+                Compare the extracted Passport face with Aadhaar / Driving License face using SFace deep feature matching.
+            </p>
+            <button class="sec-button" id="mod3MatchDocBtn" onclick="matchMod3Docs()" style="background:#0284c7; padding:12px 24px;">
+                Compare Document Faces
+            </button>
+            <div id="mod3DocMatchResult"></div>
+        </div>
+
+        <!-- 3. Live Verification & Active Blink Detection -->
+        <div class="form-card">
+            <h2>Live Verification & Active Blink Detection</h2>
+            <p style="font-size:13px; color:#666; margin-bottom:14px;">
+                Start the camera and blink naturally once (OPEN → CLOSED → OPEN). Once verified as REAL, your live face is automatically captured.
+            </p>
+            <div class="camera-container">
+                <video id="camera" autoplay playsinline></video>
+                <canvas id="cameraCanvas"></canvas>
+                <div style="margin-top:12px;">
+                    <button class="sec-button" id="startCamBtn" onclick="startCamera()" style="background:#2563eb;">
+                        Start Camera
+                    </button>
+                    <button class="sec-button" id="startBlinkBtn" onclick="startBlinkVerification()" style="background:#059669; display:none;">
+                        Start Blink Verification
+                    </button>
+                    <button class="sec-button" id="stopCamBtn" onclick="stopCamera()" style="background:#64748b; display:none;">
+                        Stop Camera
+                    </button>
+                </div>
+                <div id="blinkInstruction" class="blink-instruction">
+                    👁️ Please blink naturally once. Keep your face centered in the camera.
+                </div>
+                <div id="blinkStatus" class="blink-status">
+                    Waiting for camera...
+                </div>
+            </div>
+            <div id="liveResult"></div>
+        </div>
+
+        <!-- 4. Complete Identity Verification & Risk Scoring -->
+        <div class="form-card">
+            <h2>Complete Identity Verification & Risk Assessment</h2>
+            <p style="font-size:13px; color:#666; margin-bottom:14px;">
+                Tri-modal cross-matching: Passport ↔ ID, Passport ↔ Live, and ID ↔ Live. Evaluates multi-factor biometric risk scoring.
+            </p>
+            <div id="identityGateStatus" class="blink-status" style="display:block; margin-bottom:14px;">
+                🔒 Complete live blink verification first to unlock.
+            </div>
+            <button class="verify-btn-green" id="identityVerifyButton" onclick="verifyCompleteIdentity()" disabled>
+                Verify Complete Identity
+            </button>
+            <div id="identityResult"></div>
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+// ====================================================
+// TAB SWITCHING
+// ====================================================
+
+function switchTab(tab) {
+    document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    const targetPanel = document.getElementById("tab-" + tab);
+    if (targetPanel) targetPanel.classList.add("active");
+    const activeBtn = document.querySelector(`.tab-btn[onclick*="'${tab}'"]`);
+    if (activeBtn) activeBtn.classList.add("active");
+}
+
+
+// ====================================================
+// MODULE 1 — VERIFY
+// ====================================================
+
+function switchIdDoc(value) {
+    document.getElementById("aadhaar").style.display =
+        value === "aadhaar" ? "" : "none";
+    document.getElementById("driving_license").style.display =
+        value === "driving_license" ? "" : "none";
+}
+
+
+async function verifyDocuments() {
+
+    const passportFile = document.getElementById("passport").files[0];
+
+    const idDocType = document.querySelector(
+        "input[name='idDocType']:checked"
+    ).value;
+
+    const idFile = document.getElementById(idDocType).files[0];
+
+    const button = document.getElementById("verifyButton");
+    const status = document.getElementById("verifyStatus");
+    const results = document.getElementById("verifyResults");
+
+    if (!passportFile || !idFile) {
+        alert(
+            "Please upload both Passport and " +
+            (idDocType === "aadhaar" ? "Aadhaar" : "Driving License") +
+            " images."
+        );
+        return;
+    }
+
+    button.disabled = true;
+    button.innerText = "Processing...";
+    status.style.display = "block";
+    status.style.color = "#222";
+    status.innerText = "Uploading and processing documents...";
+    results.innerHTML = "";
+
+    try {
+
+        const formData = new FormData();
+        formData.append("passport", passportFile);
+        formData.append(idDocType, idFile);
+
+        const response = await fetch("/api/verify", {
+            method: "POST",
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || "Verification failed");
+        }
+
+        status.innerText = "Document processing completed.";
+        displayVerifyResults(data);
+
+    } catch (error) {
+        status.innerText = "Error: " + error.message;
+        status.style.color = "red";
+    } finally {
+        button.disabled = false;
+        button.innerText = "Verify Documents";
+    }
+}
+
+
+function displayVerifyResults(data) {
+
+    const results = document.getElementById("verifyResults");
+    results.innerHTML = "";
+
+    if (data.passport)
+        results.innerHTML += createDocumentResult("Passport", data.passport);
+
+    if (data.aadhaar)
+        results.innerHTML += createDocumentResult("Aadhaar", data.aadhaar);
+
+    if (data.driving_license)
+        results.innerHTML += createDocumentResult("Driving License", data.driving_license);
+
+    if (data.cross_document_validation)
+        results.innerHTML += createCrossValidationResult(data.cross_document_validation);
+}
+
+
+function createDocumentResult(documentName, documentData) {
+
+    let html = `
+        <div class="result-card">
+            <h3>${documentName}</h3>
+            <p><strong>Document Type:</strong> ${documentData.document_type || "Unknown"}</p>
+            <div class="validation"><h4>Extracted Fields</h4>
+    `;
+
+    for (const [key, value] of Object.entries(documentData.fields || {})) {
+        html += `
+            <div class="field">
+                <span class="field-name">${formatFieldName(key)}</span>
+                <span>${value || "Not detected"}</span>
+            </div>
+        `;
+    }
+
+    html += `</div><div class="validation"><h4>Field Validation</h4>`;
+
+    for (const [key, result] of Object.entries(documentData.field_validation || {})) {
+        html += `
+            <div class="validation-item">
+                ${formatFieldName(key)}:
+                <span class="${result.valid ? "match" : "mismatch"}">
+                    ${result.valid ? "VALID" : "INVALID"}
+                </span>
+            </div>
+        `;
+    }
+
+    html += `
+            </div>
+            <div class="validation">
+                <h4>Document Score</h4>
+                <p><strong>${documentData.document_score ?? 0}/100</strong></p>
+            </div>
+    `;
+
+    if (documentData.face && documentData.face.face_filename) {
+        html += `
+            <div class="validation">
+                <h4>Extracted Biometric Face</h4>
+                <div style="margin-top:8px;">
+                    <img src="/faces/${documentData.face.face_filename}?t=${Date.now()}" style="width:85px; height:85px; object-fit:cover; border-radius:6px; border:2px solid #1f6feb;">
+                    <p style="font-size:12px; color:#555; margin-top:4px;">
+                        Quality: <strong class="${documentData.face.quality_status === 'PASS' ? 'status-pass' : 'status-low'}">${documentData.face.quality_status || 'UNKNOWN'}</strong>
+                        (Score: ${documentData.face.face_quality_score ?? 'N/A'})
+                    </p>
+                </div>
+            </div>
+        `;
+    }
+
+    html += `</div>`;
+    return html;
+}
+
+
+function createCrossValidationResult(data) {
+
+    let html = `
+        <div class="result-card">
+            <h3>Cross-Document Validation</h3>
+            <p>Overall Status:
+                <span class="${data.overall_status === "MATCH" ? "match" : "mismatch"}">
+                    ${data.overall_status}
+                </span>
+            </p>
+            <div class="validation">
+    `;
+
+    for (const [key, result] of Object.entries(data.fields || {})) {
+        html += `
+            <div class="validation-item">
+                ${formatFieldName(key)}:
+                <span class="${result.status === "MATCH" ? "match" : "mismatch"}">
+                    ${result.status}
+                </span>
+            </div>
+        `;
+    }
+
+    html += `</div></div>`;
+    return html;
+}
+
+
+// ====================================================
+// MODULE 2 — ENROLL
+// ====================================================
+
+function addDocRow() {
+
+    const container = document.getElementById("docRows");
+
+    const row = document.createElement("div");
+    row.className = "doc-row";
+
+    row.innerHTML = `
+        <select>
+            <option value="aadhaar">Aadhaar</option>
+            <option value="driving license">Driving License</option>
+        </select>
+        <input type="text" placeholder="Document number">
+        <button onclick="this.parentElement.remove()">Remove</button>
+    `;
+
+    container.appendChild(row);
+}
+
+
+async function enrollPerson() {
+
+    const button = document.getElementById("enrollButton");
+    const status = document.getElementById("enrollStatus");
+    const resultDiv = document.getElementById("enrollResult");
+
+    const name        = document.getElementById("enroll-name").value.trim();
+    const dob         = document.getElementById("enroll-dob").value.trim();
+    const contact     = document.getElementById("enroll-contact").value.trim();
+    const nationality = document.getElementById("enroll-nationality").value.trim();
+    const passportNo  = document.getElementById("enroll-passport").value.trim();
+    const firpivFile  = document.getElementById("enroll-fingerprint").files[0];
+
+    // Collect documents
+    const docRows = document.querySelectorAll("#docRows .doc-row");
+    const documents = [];
+
+    docRows.forEach(row => {
+        const type   = row.querySelector("select").value;
+        const number = row.querySelector("input").value.trim();
+        if (number) documents.push({ type, number });
+    });
+
+    // Basic client-side check
+    if (!name || !dob || !contact || !passportNo || !nationality) {
+        alert("Please fill in all required fields.");
+        return;
+    }
+
+    if (!firpivFile) {
+        alert("Please upload a FIRPIV fingerprint file.");
+        return;
+    }
+
+    if (documents.length === 0) {
+        alert("Please add at least one ID document (Aadhaar or Driving License).");
+        return;
+    }
+
+    button.disabled = true;
+    button.innerText = "Enrolling...";
+    status.style.display = "block";
+    status.style.color = "#222";
+    status.innerText = "Submitting enrollment...";
+    resultDiv.innerHTML = "";
+
+    try {
+
+        const formData = new FormData();
+        formData.append("name",             name);
+        formData.append("dob",              dob);
+        formData.append("contact_no",       contact);
+        formData.append("passport_no",      passportNo);
+        formData.append("nationality",      nationality);
+        formData.append("documents",        JSON.stringify(documents));
+        formData.append("fingerprint_file", firpivFile);
+
+        const response = await fetch("/api/enroll", {
+            method: "POST",
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || "Enrollment failed");
+        }
+
+        status.innerText = "Enrollment successful!";
+        status.style.color = "green";
+
+        resultDiv.innerHTML = `
+            <div class="enroll-result">
+                <h3>Enrollment Complete</h3>
+                <div class="field">
+                    <span class="field-name">Firebase ID</span>
+                    <span>${data.data.firebase_id}</span>
+                </div>
+                <div class="field">
+                    <span class="field-name">National ID</span>
+                    <span>${data.data.national_id}</span>
+                </div>
+                <div class="field">
+                    <span class="field-name">Record Hash</span>
+                    <span style="word-break:break-all; font-size:12px;">${data.data.hash}</span>
+                </div>
+            </div>
+        `;
+
+    } catch (error) {
+        status.innerText = "Error: " + error.message;
+        status.style.color = "red";
+    } finally {
+        button.disabled = false;
+        button.innerText = "Enroll Person";
+    }
+}
+
+
+// ====================================================
+// HELPERS
+// ====================================================
+
+function formatFieldName(fieldName) {
+    return fieldName
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, char => char.toUpperCase());
+}
+
+// ====================================================
+// MODULE 3 — BIOMETRICS
+// ====================================================
+
+let cameraStream = null;
+let blinkRunning = false;
+let blinkTimer = null;
+
+function switchMod3IdDoc(value) {
+    const aadhaarInput = document.getElementById("mod3-aadhaar-input");
+    const dlInput = document.getElementById("mod3-dl-input");
+    const desc = document.getElementById("mod3SecondDocDesc");
+
+    if (value === "aadhaar") {
+        aadhaarInput.style.display = "block";
+        dlInput.style.display = "none";
+        desc.innerText = "Upload full Aadhaar or cropped face image. Automatic detection & quality scoring.";
+    } else {
+        aadhaarInput.style.display = "none";
+        dlInput.style.display = "block";
+        desc.innerText = "Upload full Driving License or cropped face image. Automatic detection & quality scoring.";
+    }
+}
+
+function displayMod3Result(elementId, data, title) {
+    const resultElement = document.getElementById(elementId);
+
+    if (!data.success) {
+        resultElement.innerHTML = `
+            <div class="result-card" style="border-left: 4px solid #dc2626; background:#fef2f2; margin-top:12px;">
+                <h4 style="color:#dc2626;">${title}</h4>
+                <p style="font-size:13px; color:#666; margin-top:4px;">${data.message || "Processing failed."}</p>
+            </div>
+        `;
+        return;
+    }
+
+    const qualityStatus = data.quality_status || "UNKNOWN";
+    const qualityClass = qualityStatus === "PASS" ? "status-pass" : "status-low";
+
+    let facePreviewHtml = "";
+    if (data.face_filename) {
+        facePreviewHtml = `
+            <div class="face-preview-box">
+                <img src="/faces/${data.face_filename}?t=${Date.now()}" alt="Extracted Face">
+            </div>
+        `;
+    }
+
+    resultElement.innerHTML = `
+        <div class="result-card" style="border-left: 4px solid #16a34a; margin-top:12px;">
+            <h4 style="color:#16a34a;">✓ ${title} Processed</h4>
+            <div class="mod3-grid">
+                <div class="mod3-item">
+                    <strong>Image Type</strong>
+                    ${data.image_type || "Unknown"}
+                </div>
+                <div class="mod3-item">
+                    <strong>Face Found</strong>
+                    ${data.face_found ? "Yes" : "No"}
+                </div>
+                <div class="mod3-item">
+                    <strong>Quality Score</strong>
+                    ${data.face_quality_score !== undefined ? data.face_quality_score : "N/A"}
+                </div>
+                <div class="mod3-item">
+                    <strong>Quality Status</strong>
+                    <span class="${qualityClass}">${qualityStatus}</span>
+                </div>
+                <div class="mod3-item">
+                    <strong>Blur Score</strong>
+                    ${data.blur_score !== undefined ? data.blur_score : "N/A"}
+                </div>
+                <div class="mod3-item">
+                    <strong>Face Count</strong>
+                    ${data.face_count || 1}
+                </div>
+            </div>
+            ${facePreviewHtml}
+        </div>
+    `;
+}
+
+async function uploadMod3Passport() {
+    const input = document.getElementById("mod3-passport-input");
+    const button = document.getElementById("mod3PassportBtn");
+    const result = document.getElementById("mod3PassportResult");
+
+    if (!input.files || input.files.length === 0) {
+        alert("Please select a passport image or cropped face image.");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("passport", input.files[0]);
+
+    button.disabled = true;
+    button.innerText = "Extracting Face...";
+    result.innerHTML = `<p style="font-size:13px; color:#1f6feb; margin-top:8px;">Extracting and validating face...</p>`;
+
+    try {
+        const response = await fetch("/upload/passport", {
+            method: "POST",
+            body: formData
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.message || "Passport processing failed.");
+        }
+        displayMod3Result("mod3PassportResult", data, "Passport Face");
+    } catch (err) {
+        displayMod3Result("mod3PassportResult", { success: false, message: err.message }, "Passport Face");
+    } finally {
+        button.disabled = false;
+        button.innerText = "Extract & Validate Passport Face";
+    }
+}
+
+async function uploadMod3SecondDoc() {
+    const idType = document.querySelector("input[name='mod3IdType']:checked").value;
+    const input = document.getElementById(idType === "aadhaar" ? "mod3-aadhaar-input" : "mod3-dl-input");
+    const button = document.getElementById("mod3SecondBtn");
+    const result = document.getElementById("mod3SecondResult");
+    const label = idType === "aadhaar" ? "Aadhaar" : "Driving License";
+
+    if (!input.files || input.files.length === 0) {
+        alert(`Please select an ${label} image or cropped face image.`);
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append(idType, input.files[0]);
+
+    button.disabled = true;
+    button.innerText = "Extracting Face...";
+    result.innerHTML = `<p style="font-size:13px; color:#1f6feb; margin-top:8px;">Extracting and validating face...</p>`;
+
+    try {
+        const response = await fetch(`/upload/${idType}`, {
+            method: "POST",
+            body: formData
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.message || `${label} processing failed.`);
+        }
+        displayMod3Result("mod3SecondResult", data, `${label} Face`);
+    } catch (err) {
+        displayMod3Result("mod3SecondResult", { success: false, message: err.message }, `${label} Face`);
+    } finally {
+        button.disabled = false;
+        button.innerText = "Extract & Validate ID Face";
+    }
+}
+
+async function matchMod3Docs() {
+    const button = document.getElementById("mod3MatchDocBtn");
+    const result = document.getElementById("mod3DocMatchResult");
+
+    button.disabled = true;
+    button.innerText = "Matching Faces...";
+    result.innerHTML = `<p style="font-size:13px; color:#1f6feb; margin-top:8px;">Comparing Passport & ID face embeddings with SFace...</p>`;
+
+    try {
+        const response = await fetch("/match/passport-aadhaar", { method: "POST" });
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || "Face matching failed.");
+        }
+
+        const matched = data.decision === "MATCHED";
+        const decClass = matched ? "status-pass" : "status-low";
+
+        result.innerHTML = `
+            <div class="match-box ${matched ? '' : 'fail'}">
+                <h3>Passport ↔ ${data.id_type || "ID"} Comparison</h3>
+                <div class="mod3-grid">
+                    <div class="mod3-item">
+                        <strong>Similarity Score</strong>
+                        ${Number(data.similarity).toFixed(4)}
+                    </div>
+                    <div class="mod3-item">
+                        <strong>Threshold</strong>
+                        ${data.threshold}
+                    </div>
+                    <div class="mod3-item">
+                        <strong>Decision</strong>
+                        <span class="${decClass} match-decision-text">${data.decision}</span>
+                    </div>
+                    <div class="mod3-item">
+                        <strong>Model</strong>
+                        OpenCV SFace
+                    </div>
+                </div>
+                <p style="margin-top:12px; font-weight:bold;" class="${decClass}">
+                    ${matched ? "✓ Faces match successfully across identity documents." : "✗ Faces did not match threshold."}
+                </p>
+            </div>
+        `;
+    } catch (err) {
+        result.innerHTML = `
+            <div class="result-card" style="border-left:4px solid #dc2626; background:#fef2f2; margin-top:12px;">
+                <h4 style="color:#dc2626;">Matching Error</h4>
+                <p style="font-size:13px; color:#666; margin-top:4px;">${err.message}</p>
+            </div>
+        `;
+    } finally {
+        button.disabled = false;
+        button.innerText = "Compare Document Faces";
+    }
+}
+
+// Camera & Active Blink Liveness
+async function startCamera() {
+    const video = document.getElementById("camera");
+    const startBtn = document.getElementById("startCamBtn");
+    const blinkBtn = document.getElementById("startBlinkBtn");
+    const stopBtn = document.getElementById("stopCamBtn");
+    const result = document.getElementById("liveResult");
+    const status = document.getElementById("blinkStatus");
+
+    try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+            video: { width: 640, height: 480, facingMode: "user" },
+            audio: false
+        });
+        video.srcObject = cameraStream;
+        video.style.display = "block";
+        startBtn.style.display = "none";
+        blinkBtn.style.display = "inline-block";
+        stopBtn.style.display = "inline-block";
+        status.style.display = "block";
+        status.innerHTML = `<span style="color:#2563eb;">Camera active. Click <strong>Start Blink Verification</strong> when ready.</span>`;
+        result.innerHTML = "";
+    } catch (err) {
+        result.innerHTML = `
+            <div class="result-card" style="border-left:4px solid #dc2626; background:#fef2f2; margin-top:12px;">
+                <h4 style="color:#dc2626;">Camera Error</h4>
+                <p style="font-size:13px; color:#666; margin-top:4px;">${err.message}</p>
+            </div>
+        `;
+    }
+}
+
+async function startBlinkVerification() {
+    if (!cameraStream) return;
+
+    const blinkBtn = document.getElementById("startBlinkBtn");
+    const instruction = document.getElementById("blinkInstruction");
+    const status = document.getElementById("blinkStatus");
+    const result = document.getElementById("liveResult");
+
+    blinkBtn.disabled = true;
+    blinkBtn.innerText = "Verification Running...";
+    instruction.style.display = "block";
+    status.style.display = "block";
+    status.innerHTML = `<span class="blink-waiting">Waiting for face and natural blink...</span>`;
+    result.innerHTML = "";
+
+    try {
+        const response = await fetch("/blink/start", { method: "POST" });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || "Failed to start blink detection.");
+
+        blinkRunning = true;
+        startBlinkFrameLoop();
+    } catch (err) {
+        blinkRunning = false;
+        blinkBtn.disabled = false;
+        blinkBtn.innerText = "Start Blink Verification";
+        result.innerHTML = `
+            <div class="result-card" style="border-left:4px solid #dc2626; background:#fef2f2; margin-top:12px;">
+                <h4 style="color:#dc2626;">Blink Error</h4>
+                <p style="font-size:13px; color:#666; margin-top:4px;">${err.message}</p>
+            </div>
+        `;
+    }
+}
+
+function startBlinkFrameLoop() {
+    if (!blinkRunning) return;
+    processCurrentFrame();
+    blinkTimer = setTimeout(startBlinkFrameLoop, 180);
+}
+
+async function processCurrentFrame() {
+    const video = document.getElementById("camera");
+    const canvas = document.getElementById("cameraCanvas");
+    if (!video || !canvas || !cameraStream || video.videoWidth === 0) return;
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob(async function(blob) {
+        if (!blob || !blinkRunning) return;
+
+        const formData = new FormData();
+        formData.append("frame", blob, "blink_frame.jpg");
+
+        try {
+            const res = await fetch("/blink/frame", { method: "POST", body: formData });
+            const data = await res.json();
+            if (res.ok) updateBlinkUI(data);
+        } catch (e) {
+            console.error("Frame analysis error:", e);
+        }
+    }, "image/jpeg", 0.80);
+}
+
+function updateBlinkUI(data) {
+    const status = document.getElementById("blinkStatus");
+    const instruction = document.getElementById("blinkInstruction");
+    const result = document.getElementById("liveResult");
+    const blinkBtn = document.getElementById("startBlinkBtn");
+    const identityBtn = document.getElementById("identityVerifyButton");
+    const identityGate = document.getElementById("identityGateStatus");
+
+    if (!data.success) {
+        status.innerHTML = `<span class="blink-waiting">${data.message || "Face not detected in frame."}</span>`;
+        return;
+    }
+
+    if (data.blink_detected) {
+        blinkRunning = false;
+        if (blinkTimer) { clearTimeout(blinkTimer); blinkTimer = null; }
+        instruction.style.display = "none";
+        status.innerHTML = `<span class="blink-success">✓ Blink verified! Active liveness confirmed: REAL</span>`;
+
+        result.innerHTML = `
+            <div class="match-box">
+                <h3 style="color:#15803d;">✓ Active Liveness Verified</h3>
+                <div class="mod3-grid">
+                    <div class="mod3-item"><strong>Liveness</strong><span class="status-pass">REAL</span></div>
+                    <div class="mod3-item"><strong>Blink Status</strong><span class="status-pass">VERIFIED</span></div>
+                    <div class="mod3-item"><strong>Total Blinks</strong>${data.total_blinks}</div>
+                    <div class="mod3-item"><strong>Eye State</strong>${data.eye_state}</div>
+                    <div class="mod3-item"><strong>Left EAR</strong>${data.left_ear}</div>
+                    <div class="mod3-item"><strong>Right EAR</strong>${data.right_ear}</div>
+                </div>
+            </div>
+        `;
+
+        blinkBtn.disabled = false;
+        blinkBtn.innerText = "Blink Verified ✓";
+
+        if (data.live_face_captured) {
+            identityBtn.disabled = false;
+            identityGate.innerHTML = `<span class="status-pass">🔓 Active Liveness Verified: REAL — Live face captured. Complete identity verification is now unlocked.</span>`;
+        } else {
+            identityGate.innerHTML = `<span class="status-low">⚠️ Liveness passed, but live face capture failed. Please retry.</span>`;
+        }
+        return;
+    }
+
+    if (data.face_detected) {
+        const msg = data.eye_state === "CLOSED" ? "Eyes closed detected — open eyes to complete blink" : "Face detected. Please blink naturally once.";
+        status.innerHTML = `
+            <span class="blink-waiting">${msg}</span><br>
+            <small style="color:#555;">Eye State: <strong>${data.eye_state}</strong> | Left EAR: ${data.left_ear} | Right EAR: ${data.right_ear}</small>
+        `;
+    }
+}
+
+async function stopCamera() {
+    blinkRunning = false;
+    if (blinkTimer) { clearTimeout(blinkTimer); blinkTimer = null; }
+
+    try {
+        await fetch("/blink/reset", { method: "POST" });
+    } catch (e) {}
+
+    const video = document.getElementById("camera");
+    const startBtn = document.getElementById("startCamBtn");
+    const blinkBtn = document.getElementById("startBlinkBtn");
+    const stopBtn = document.getElementById("stopCamBtn");
+    const instruction = document.getElementById("blinkInstruction");
+    const status = document.getElementById("blinkStatus");
+
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(t => t.stop());
+        cameraStream = null;
+    }
+
+    video.srcObject = null;
+    video.style.display = "none";
+    startBtn.style.display = "inline-block";
+    blinkBtn.style.display = "none";
+    blinkBtn.disabled = false;
+    blinkBtn.innerText = "Start Blink Verification";
+    stopBtn.style.display = "none";
+    instruction.style.display = "none";
+    status.style.display = "none";
+}
+
+// Complete Identity Verification
+async function verifyCompleteIdentity() {
+    const button = document.getElementById("identityVerifyButton");
+    const result = document.getElementById("identityResult");
+
+    button.disabled = true;
+    button.innerText = "Cross-Matching Tri-Modal Biometrics...";
+    result.innerHTML = `<p style="font-size:13px; color:#1f6feb; margin-top:8px;">Running tri-modal SFace matching & calculating multi-factor risk score...</p>`;
+
+    try {
+        const res = await fetch("/match/identity", { method: "POST" });
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+            throw new Error(data.message || "Complete identity verification failed.");
+        }
+
+        const pairs = [
+            ["Passport ↔ ID Document", data.passport_aadhaar],
+            ["Passport ↔ Live Face", data.passport_live],
+            ["ID Document ↔ Live Face", data.aadhaar_live]
+        ];
+
+        const rows = pairs.map(([name, item]) => {
+            const matched = item && item.decision === "MATCHED";
+            const cls = matched ? "status-pass" : "status-low";
+            const sim = item && item.similarity !== undefined ? Number(item.similarity).toFixed(4) : "N/A";
+            return `
+                <div class="mod3-item">
+                    <strong>${name}</strong>
+                    <span class="${cls}">${item ? item.decision : "ERROR"}</span>
+                    <br><small style="color:#666;">Similarity: ${sim}</small>
+                </div>
+            `;
+        }).join("");
+
+        const verified = data.overall_decision === "IDENTITY VERIFIED";
+        const riskLevel = data.risk_level || "UNKNOWN";
+        const riskClass = riskLevel === "LOW" ? "status-pass" : (riskLevel === "MEDIUM" ? "status-uncertain" : "status-low");
+
+        result.innerHTML = `
+            <div class="match-box ${verified ? '' : 'fail'}">
+                <h3>Final Identity Verification Result</h3>
+                <div class="mod3-grid">
+                    ${rows}
+                </div>
+                <div style="margin-top:18px; text-align:center;">
+                    <div style="margin-bottom:8px;">
+                        <strong>Biometric Risk Score</strong>
+                        <div class="match-decision-text" style="color:#111;">
+                            ${data.risk_score !== undefined ? Number(data.risk_score).toFixed(2) + " / 100" : "N/A"}
+                        </div>
+                    </div>
+                    <div style="margin-bottom:8px;">
+                        <strong>Risk Level</strong>
+                        <div class="match-decision-text ${riskClass}">
+                            ${riskLevel}
+                        </div>
+                    </div>
+                    <div>
+                        <strong>Overall Decision</strong>
+                        <div class="match-decision-text ${verified ? 'status-pass' : 'status-low'}" style="font-size:22px; margin-top:4px;">
+                            ${data.overall_decision || "REJECTED"}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    } catch (err) {
+        result.innerHTML = `
+            <div class="result-card" style="border-left:4px solid #dc2626; background:#fef2f2; margin-top:12px;">
+                <h4 style="color:#dc2626;">Verification Error</h4>
+                <p style="font-size:13px; color:#666; margin-top:4px;">${err.message}</p>
+            </div>
+        `;
+    } finally {
+        button.disabled = false;
+        button.innerText = "Verify Complete Identity";
+    }
+}
+
+window.addEventListener("beforeunload", function() {
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(t => t.stop());
+    }
+});
+
+</script>
+
+</body>
+
+</html>

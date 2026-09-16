@@ -1,0 +1,2283 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRUST-ID | Module 3</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f4f7fb;
+            color: #1f2937;
+        }
+
+        .header {
+            background: #111827;
+            color: white;
+            padding: 24px 40px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 30px;
+        }
+
+        .header p {
+            margin: 8px 0 0;
+            color: #cbd5e1;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 35px auto;
+            padding: 0 20px;
+        }
+
+        .section {
+            background: white;
+            border-radius: 14px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .section h2 {
+            margin-top: 0;
+            color: #111827;
+        }
+
+        .section-description {
+            color: #64748b;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .upload-box {
+            border: 2px dashed #94a3b8;
+            border-radius: 12px;
+            padding: 25px;
+            text-align: center;
+            background: #f8fafc;
+        }
+
+        input[type="file"] {
+            display: block;
+            width: 100%;
+            margin-bottom: 18px;
+            padding: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            background: white;
+        }
+
+        button {
+            border: none;
+            border-radius: 8px;
+            padding: 12px 22px;
+            background: #2563eb;
+            color: white;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        button:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        .secondary-button {
+            background: #475569;
+        }
+
+        .secondary-button:hover {
+            background: #334155;
+        }
+
+        .verify-button {
+            background: #059669;
+            font-size: 16px;
+            padding: 14px 28px;
+        }
+
+        .verify-button:hover {
+            background: #047857;
+        }
+
+        .verify-button:disabled,
+        .verify-button:disabled:hover {
+            background: #94a3b8;
+            color: white;
+            cursor: not-allowed;
+        }
+
+        .result {
+            margin-top: 22px;
+            padding: 20px;
+            border-radius: 10px;
+            background: #f8fafc;
+            display: none;
+        }
+
+        .result.success {
+            display: block;
+            border-left: 5px solid #16a34a;
+        }
+
+        .result.error {
+            display: block;
+            border-left: 5px solid #dc2626;
+            background: #fef2f2;
+        }
+
+        .result h3 {
+            margin-top: 0;
+        }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .result-item {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .result-item strong {
+            display: block;
+            margin-bottom: 5px;
+            color: #475569;
+            font-size: 13px;
+        }
+
+        .face-preview {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .face-preview img {
+            width: 112px;
+            height: 112px;
+            object-fit: cover;
+            border-radius: 10px;
+            border: 3px solid #2563eb;
+            margin: 8px;
+        }
+
+        .status-pass {
+            color: #15803d;
+            font-weight: bold;
+        }
+
+        .status-low {
+            color: #dc2626;
+            font-weight: bold;
+        }
+
+        .status-uncertain {
+            color: #d97706;
+            font-weight: bold;
+        }
+
+        .camera-container {
+            text-align: center;
+        }
+
+        #camera {
+            width: 100%;
+            max-width: 640px;
+            height: auto;
+            background: #000;
+            border-radius: 12px;
+            margin: 15px auto;
+        }
+
+        #cameraCanvas {
+            display: none;
+        }
+
+        .camera-buttons {
+            margin-top: 15px;
+        }
+
+        .loading {
+            color: #2563eb;
+            font-weight: bold;
+        }
+
+        .liveness-box {
+            margin-top: 20px;
+            padding: 18px;
+            border-radius: 10px;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+        }
+
+        .liveness-box h3 {
+            margin-top: 0;
+        }
+
+        .blink-instruction {
+            margin-top: 20px;
+            padding: 18px;
+            border-radius: 10px;
+            background: #fff7ed;
+            border-left: 5px solid #f97316;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .blink-status {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            background: white;
+            border: 1px solid #e2e8f0;
+        }
+
+        .blink-success {
+            color: #15803d;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .blink-waiting {
+            color: #d97706;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .match-box {
+            margin-top: 20px;
+            padding: 22px;
+            border-radius: 12px;
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+        }
+
+        .match-box h3 {
+            margin-top: 0;
+        }
+
+        .match-decision {
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        .match-button-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 25px;
+            color: #64748b;
+            font-size: 13px;
+        }
+
+        @media (max-width: 700px) {
+            .header {
+                padding: 20px;
+            }
+
+            .container {
+                margin-top: 20px;
+            }
+
+            .result-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+
+<body>
+
+    <div class="header">
+        <h1>TRUST-ID</h1>
+        <p>Module 3 - Face Input & Verification</p>
+    </div>
+
+
+    <div class="container">
+
+
+        <!-- =====================================================
+             PASSPORT
+        ====================================================== -->
+
+        <div class="section">
+
+            <h2>Passport</h2>
+
+            <p class="section-description">
+                Upload a complete passport image or a direct face image.
+                The system automatically determines the image type and
+                extracts the usable face.
+            </p>
+
+            <div class="upload-box">
+
+                <input
+                    type="file"
+                    id="passportInput"
+                    accept="image/*"
+                >
+
+                <button
+                    id="passportButton"
+                    onclick="uploadPassport()"
+                >
+                    Upload Passport / Face Image
+                </button>
+
+            </div>
+
+            <div
+                id="passportResult"
+                class="result"
+            ></div>
+
+        </div>
+
+
+        <!-- =====================================================
+             AADHAAR
+        ====================================================== -->
+
+        <div class="section">
+
+            <h2>Aadhaar</h2>
+
+            <p class="section-description">
+                Upload a complete Aadhaar image or a direct face image.
+                The system automatically detects the image type,
+                detects the face, validates quality and extracts the face.
+            </p>
+
+            <div class="upload-box">
+
+                <input
+                    type="file"
+                    id="aadhaarInput"
+                    accept="image/*"
+                >
+
+                <button
+                    id="aadhaarButton"
+                    onclick="uploadAadhaar()"
+                >
+                    Upload Aadhaar / Face Image
+                </button>
+
+            </div>
+
+            <div
+                id="aadhaarResult"
+                class="result"
+            ></div>
+
+        </div>
+
+
+        <!-- =====================================================
+             PASSPORT ↔ AADHAAR MATCHING
+        ====================================================== -->
+
+        <div class="section">
+
+            <h2>Identity Document Matching</h2>
+
+            <p class="section-description">
+                Compare the extracted Passport face with the extracted
+                Aadhaar face using the SFace face-recognition model.
+            </p>
+
+            <div class="match-button-container">
+
+                <button
+                    id="matchButton"
+                    class="verify-button"
+                    onclick="matchPassportAadhaar()"
+                >
+                    Verify Passport ↔ Aadhaar
+                </button>
+
+            </div>
+
+            <div
+                id="matchResult"
+                class="result"
+            ></div>
+
+        </div>
+
+
+        <!-- =====================================================
+             LIVE VERIFICATION
+        ====================================================== -->
+
+        <div class="section">
+
+            <h2>Live Verification</h2>
+
+            <p class="section-description">
+                Start the camera and perform an active blink verification.
+                The system continuously analyzes your eyes and detects:
+                <strong>OPEN → CLOSED → OPEN</strong>
+            </p>
+
+
+            <div class="camera-container">
+
+                <video
+                    id="camera"
+                    autoplay
+                    playsinline
+                    style="display:none;"
+                ></video>
+
+                <canvas
+                    id="cameraCanvas"
+                ></canvas>
+
+
+                <div class="camera-buttons">
+
+                    <button
+                        id="startCameraButton"
+                        onclick="startCamera()"
+                    >
+                        Start Camera
+                    </button>
+
+
+                    <button
+                        id="startBlinkButton"
+                        onclick="startBlinkVerification()"
+                        style="display:none;"
+                    >
+                        Start Blink Verification
+                    </button>
+
+
+                    <button
+                        id="stopCameraButton"
+                        onclick="stopCamera()"
+                        class="secondary-button"
+                        style="display:none;"
+                    >
+                        Stop Camera
+                    </button>
+
+                </div>
+
+
+                <div
+                    id="blinkInstruction"
+                    class="blink-instruction"
+                    style="display:none;"
+                >
+                    👁️ Please blink naturally once.
+                </div>
+
+
+                <div
+                    id="blinkStatus"
+                    class="blink-status"
+                    style="display:none;"
+                >
+                    Waiting for blink...
+                </div>
+
+            </div>
+
+
+            <div
+                id="liveResult"
+                class="result"
+            ></div>
+
+        </div>
+
+
+        <!-- =====================================================
+             COMPLETE IDENTITY VERIFICATION
+        ====================================================== -->
+
+        <div class="section">
+
+            <h2>Complete Identity Verification</h2>
+
+            <p class="section-description">
+                Final identity verification is available only after successful
+                live liveness verification and live-face capture.
+            </p>
+
+            <div class="match-button-container">
+
+                <button
+                    id="identityVerifyButton"
+                    class="verify-button"
+                    onclick="verifyCompleteIdentity()"
+                    disabled
+                >
+                    Verify Complete Identity
+                </button>
+
+            </div>
+
+            <div
+                id="identityGateStatus"
+                class="blink-status"
+            >
+                🔒 Complete liveness verification first.
+            </div>
+
+            <div
+                id="identityResult"
+                class="result"
+            ></div>
+
+        </div>
+
+
+    </div>
+
+
+    <div class="footer">
+        TRUST-ID | AI-Based Identity Verification System
+    </div>
+
+
+    <script>
+
+        // ====================================================
+        // GLOBAL VARIABLES
+        // ====================================================
+
+        let cameraStream = null;
+
+        let blinkRunning = false;
+
+        let blinkTimer = null;
+
+
+        // ====================================================
+        // DISPLAY DOCUMENT RESULT
+        // ====================================================
+
+        function displayResult(
+            elementId,
+            data,
+            title
+        ) {
+
+            const resultElement =
+                document.getElementById(elementId);
+
+
+            if (!data.success) {
+
+                resultElement.className =
+                    "result error";
+
+                resultElement.innerHTML = `
+                    <h3>${title}</h3>
+
+                    <p>
+                        <strong>Error:</strong>
+                        ${data.message || "Processing failed."}
+                    </p>
+                `;
+
+                return;
+            }
+
+
+            const qualityScore =
+                data.face_quality_score !== undefined
+                    ? data.face_quality_score
+                    : 0;
+
+
+            const blurScore =
+                data.blur_score !== undefined
+                    ? data.blur_score
+                    : 0;
+
+
+            const qualityStatus =
+                data.quality_status || "UNKNOWN";
+
+
+            const qualityClass =
+                qualityStatus === "PASS"
+                    ? "status-pass"
+                    : "status-low";
+
+
+            let faceImageHTML = "";
+
+
+            if (data.face_filename) {
+
+                faceImageHTML = `
+                    <div class="face-preview">
+
+                        <h3>
+                            Extracted Face
+                        </h3>
+
+                        <img
+                            src="/faces/${data.face_filename}?t=${Date.now()}"
+                            alt="Extracted Face"
+                        >
+
+                    </div>
+                `;
+            }
+
+
+            resultElement.className =
+                "result success";
+
+
+            resultElement.innerHTML = `
+
+                <h3>
+                    ${title}
+                </h3>
+
+                <div class="result-grid">
+
+                    <div class="result-item">
+
+                        <strong>
+                            Detected Image Type
+                        </strong>
+
+                        ${data.image_type || "Unknown"}
+
+                    </div>
+
+
+                    <div class="result-item">
+
+                        <strong>
+                            Face Found
+                        </strong>
+
+                        ${data.face_found ? "Yes" : "No"}
+
+                    </div>
+
+
+                    <div class="result-item">
+
+                        <strong>
+                            Face Count
+                        </strong>
+
+                        ${data.face_count || 1}
+
+                    </div>
+
+
+                    <div class="result-item">
+
+                        <strong>
+                            Face Quality Score
+                        </strong>
+
+                        ${qualityScore}
+
+                    </div>
+
+
+                    <div class="result-item">
+
+                        <strong>
+                            Blur Score
+                        </strong>
+
+                        ${blurScore}
+
+                    </div>
+
+
+                    <div class="result-item">
+
+                        <strong>
+                            Quality
+                        </strong>
+
+                        <span class="${qualityClass}">
+                            ${qualityStatus}
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <p>
+
+                    <strong>
+                        Message:
+                    </strong>
+
+                    ${data.message ||
+                      "Face processed successfully."}
+
+                </p>
+
+
+                ${faceImageHTML}
+
+            `;
+        }
+
+
+        // ====================================================
+        // PASSPORT UPLOAD
+        // ====================================================
+
+        async function uploadPassport() {
+
+            const input =
+                document.getElementById(
+                    "passportInput"
+                );
+
+
+            const button =
+                document.getElementById(
+                    "passportButton"
+                );
+
+
+            const result =
+                document.getElementById(
+                    "passportResult"
+                );
+
+
+            if (
+                !input.files ||
+                input.files.length === 0
+            ) {
+
+                result.className =
+                    "result error";
+
+                result.innerHTML = `
+                    <h3>Passport</h3>
+
+                    <p>
+                        Please select a passport
+                        or face image.
+                    </p>
+                `;
+
+                return;
+            }
+
+
+            const formData =
+                new FormData();
+
+
+            formData.append(
+                "passport",
+                input.files[0]
+            );
+
+
+            button.disabled = true;
+
+            button.innerText =
+                "Processing...";
+
+
+            result.className =
+                "result success";
+
+
+            result.innerHTML = `
+                <p class="loading">
+                    Detecting image type
+                    and extracting face...
+                </p>
+            `;
+
+
+            try {
+
+                const response =
+                    await fetch(
+                        "/upload/passport",
+                        {
+                            method: "POST",
+                            body: formData
+                        }
+                    );
+
+
+                const data =
+                    await response.json();
+
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        data.message ||
+                        "Passport processing failed."
+                    );
+                }
+
+
+                displayResult(
+                    "passportResult",
+                    data,
+                    "Passport Processing Result"
+                );
+
+
+            }
+            catch (error) {
+
+                result.className =
+                    "result error";
+
+
+                result.innerHTML = `
+                    <h3>Passport</h3>
+
+                    <p>
+                        <strong>Error:</strong>
+                        ${error.message}
+                    </p>
+                `;
+
+            }
+            finally {
+
+                button.disabled = false;
+
+                button.innerText =
+                    "Upload Passport / Face Image";
+
+            }
+
+        }
+
+
+        // ====================================================
+        // AADHAAR UPLOAD
+        // ====================================================
+
+        async function uploadAadhaar() {
+
+            const input =
+                document.getElementById(
+                    "aadhaarInput"
+                );
+
+
+            const button =
+                document.getElementById(
+                    "aadhaarButton"
+                );
+
+
+            const result =
+                document.getElementById(
+                    "aadhaarResult"
+                );
+
+
+            if (
+                !input.files ||
+                input.files.length === 0
+            ) {
+
+                result.className =
+                    "result error";
+
+
+                result.innerHTML = `
+                    <h3>Aadhaar</h3>
+
+                    <p>
+                        Please select an Aadhaar
+                        or face image.
+                    </p>
+                `;
+
+                return;
+            }
+
+
+            const formData =
+                new FormData();
+
+
+            formData.append(
+                "aadhaar",
+                input.files[0]
+            );
+
+
+            button.disabled = true;
+
+            button.innerText =
+                "Processing...";
+
+
+            result.className =
+                "result success";
+
+
+            result.innerHTML = `
+                <p class="loading">
+                    Detecting image type
+                    and extracting face...
+                </p>
+            `;
+
+
+            try {
+
+                const response =
+                    await fetch(
+                        "/upload/aadhaar",
+                        {
+                            method: "POST",
+                            body: formData
+                        }
+                    );
+
+
+                const data =
+                    await response.json();
+
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        data.message ||
+                        "Aadhaar processing failed."
+                    );
+                }
+
+
+                displayResult(
+                    "aadhaarResult",
+                    data,
+                    "Aadhaar Processing Result"
+                );
+
+
+            }
+            catch (error) {
+
+                result.className =
+                    "result error";
+
+
+                result.innerHTML = `
+                    <h3>Aadhaar</h3>
+
+                    <p>
+                        <strong>Error:</strong>
+                        ${error.message}
+                    </p>
+                `;
+
+            }
+            finally {
+
+                button.disabled = false;
+
+                button.innerText =
+                    "Upload Aadhaar / Face Image";
+
+            }
+
+        }
+
+
+        // ====================================================
+        // PASSPORT ↔ AADHAAR MATCHING
+        // ====================================================
+
+        async function matchPassportAadhaar() {
+
+            const button =
+                document.getElementById(
+                    "matchButton"
+                );
+
+
+            const result =
+                document.getElementById(
+                    "matchResult"
+                );
+
+
+            button.disabled = true;
+
+            button.innerText =
+                "Matching Faces...";
+
+
+            result.className =
+                "result success";
+
+
+            result.innerHTML = `
+                <p class="loading">
+                    Comparing Passport and Aadhaar faces
+                    using SFace...
+                </p>
+            `;
+
+
+            try {
+
+                const response =
+                    await fetch(
+                        "/match/passport-aadhaar",
+                        {
+                            method: "POST"
+                        }
+                    );
+
+
+                const data =
+                    await response.json();
+
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        data.message ||
+                        "Face matching failed."
+                    );
+                }
+
+
+                const decision =
+                    data.decision || "ERROR";
+
+
+                const matched =
+                    decision === "MATCHED";
+
+
+                const decisionClass =
+                    matched
+                        ? "status-pass"
+                        : "status-low";
+
+
+                result.className =
+                    "result success";
+
+
+                result.innerHTML = `
+
+                    <div class="match-box">
+
+                        <h3>
+                            Passport ↔ Aadhaar
+                        </h3>
+
+
+                        <div class="result-grid">
+
+
+                            <div class="result-item">
+
+                                <strong>
+                                    Similarity Score
+                                </strong>
+
+                                ${Number(
+                                    data.similarity
+                                ).toFixed(4)}
+
+                            </div>
+
+
+                            <div class="result-item">
+
+                                <strong>
+                                    Matching Threshold
+                                </strong>
+
+                                ${data.threshold}
+
+                            </div>
+
+
+                            <div class="result-item">
+
+                                <strong>
+                                    Decision
+                                </strong>
+
+                                <span
+                                    class="${decisionClass}
+                                           match-decision"
+                                >
+
+                                    ${decision}
+
+                                </span>
+
+                            </div>
+
+
+                            <div class="result-item">
+
+                                <strong>
+                                    Matching Model
+                                </strong>
+
+                                OpenCV SFace
+
+                            </div>
+
+
+                        </div>
+
+
+                        <p>
+
+                            <strong>
+                                Message:
+                            </strong>
+
+                            ${data.message ||
+                              "Face matching completed."}
+
+                        </p>
+
+
+                        ${
+                            matched
+                                ? `
+                                    <p class="status-pass">
+                                        ✓ Passport and Aadhaar
+                                        faces matched successfully.
+                                    </p>
+                                  `
+                                : `
+                                    <p class="status-low">
+                                        ✗ Passport and Aadhaar
+                                        faces did not match.
+                                    </p>
+                                  `
+                        }
+
+                    </div>
+
+                `;
+
+
+            }
+            catch (error) {
+
+                result.className =
+                    "result error";
+
+
+                result.innerHTML = `
+
+                    <h3>
+                        Passport ↔ Aadhaar Matching
+                    </h3>
+
+                    <p>
+
+                        <strong>
+                            Error:
+                        </strong>
+
+                        ${error.message}
+
+                    </p>
+
+                `;
+
+            }
+            finally {
+
+                button.disabled = false;
+
+                button.innerText =
+                    "Verify Passport ↔ Aadhaar";
+
+            }
+
+        }
+
+
+
+        // ====================================================
+        // COMPLETE IDENTITY VERIFICATION
+        // ====================================================
+
+        async function verifyCompleteIdentity() {
+
+            const button =
+                document.getElementById("identityVerifyButton");
+
+            const result =
+                document.getElementById("identityResult");
+
+            const gateStatus =
+                document.getElementById("identityGateStatus");
+
+            if (button.disabled) {
+                return;
+            }
+
+            button.disabled = true;
+            button.innerText = "Verifying Identity...";
+
+            result.className = "result success";
+            result.innerHTML = `
+                <p class="loading">
+                    Comparing Passport, Aadhaar and Live face using SFace...
+                </p>
+            `;
+
+            try {
+
+                const response = await fetch(
+                    "/match/identity",
+                    { method: "POST" }
+                );
+
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(
+                        data.message ||
+                        "Complete identity verification failed."
+                    );
+                }
+
+                const pairs = [
+                    ["Passport ↔ Aadhaar", data.passport_aadhaar],
+                    ["Passport ↔ Live", data.passport_live],
+                    ["Aadhaar ↔ Live", data.aadhaar_live]
+                ];
+
+                const rows = pairs.map(([name, item]) => {
+                    const matched = item && item.decision === "MATCHED";
+                    const cls = matched ? "status-pass" : "status-low";
+                    const similarity =
+                        item && item.similarity !== undefined
+                            ? Number(item.similarity).toFixed(4)
+                            : "N/A";
+
+                    return `
+                        <div class="result-item">
+                            <strong>${name}</strong>
+                            <span class="${cls}">
+                                ${item ? item.decision : "ERROR"}
+                            </span>
+                            <br>
+                            Similarity: ${similarity}
+                        </div>
+                    `;
+                }).join("");
+
+                const verified =
+                    data.overall_decision === "IDENTITY VERIFIED";
+
+                result.className =
+                    verified ? "result success" : "result error";
+
+                result.innerHTML = `
+                    <div class="match-box">
+
+                        <h3>Final Identity Verification Result</h3>
+
+                        <div class="result-grid">
+                            ${rows}
+                        </div>
+
+                        <div style="margin-top:20px; text-align:center;">
+                            <strong>Risk Score</strong>
+                            <div
+                                class="match-decision"
+                                style="margin-top:8px;"
+                            >
+                                ${data.risk_score !== undefined
+                                    ? Number(data.risk_score).toFixed(2) + " / 100"
+                                    : "N/A"}
+                            </div>
+                        </div>
+
+                        <div style="margin-top:20px; text-align:center;">
+                            <strong>Risk Level</strong>
+                            <div
+                                class="${data.risk_level === "LOW"
+                                    ? "status-pass"
+                                    : data.risk_level === "MEDIUM"
+                                        ? "status-uncertain"
+                                        : "status-low"} match-decision"
+                                style="margin-top:8px;"
+                            >
+                                ${data.risk_level || "N/A"}
+                            </div>
+                        </div>
+
+                        <div style="margin-top:20px; text-align:center;">
+                            <strong>Overall Decision</strong>
+                            <div
+                                class="${verified ? "status-pass" : "status-low"} match-decision"
+                                style="margin-top:8px;"
+                            >
+                                ${data.overall_decision || "ERROR"}
+                            </div>
+                        </div>
+
+                    </div>
+                `;
+
+                gateStatus.innerHTML = verified
+                    ? `<span class="status-pass">✅ Identity verification completed successfully.</span>`
+                    : `<span class="status-low">⚠️ Identity verification failed.</span>`;
+
+            } catch (error) {
+
+                result.className = "result error";
+
+                result.innerHTML = `
+                    <h3>Final Identity Verification</h3>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                `;
+
+            } finally {
+                button.disabled = false;
+                button.innerText = "Verify Complete Identity";
+            }
+        }
+
+        // ====================================================
+        // START CAMERA
+        // ====================================================
+
+        async function startCamera() {
+
+            const video =
+                document.getElementById(
+                    "camera"
+                );
+
+
+            const startButton =
+                document.getElementById(
+                    "startCameraButton"
+                );
+
+
+            const blinkButton =
+                document.getElementById(
+                    "startBlinkButton"
+                );
+
+
+            const stopButton =
+                document.getElementById(
+                    "stopCameraButton"
+                );
+
+
+            const identityButton =
+                document.getElementById("identityVerifyButton");
+
+            const identityGateStatus =
+                document.getElementById("identityGateStatus");
+
+            identityButton.disabled = true;
+            identityButton.innerText = "Verify Complete Identity";
+            identityGateStatus.innerHTML =
+                "🔒 Complete liveness verification first.";
+
+
+            const result =
+                document.getElementById(
+                    "liveResult"
+                );
+
+
+            try {
+
+                cameraStream =
+                    await navigator
+                        .mediaDevices
+                        .getUserMedia({
+
+                            video: {
+                                width: 640,
+                                height: 480,
+                                facingMode: "user"
+                            },
+
+                            audio: false
+
+                        });
+
+
+                video.srcObject =
+                    cameraStream;
+
+
+                video.style.display =
+                    "block";
+
+
+                startButton.style.display =
+                    "none";
+
+
+                blinkButton.style.display =
+                    "inline-block";
+
+
+                stopButton.style.display =
+                    "inline-block";
+
+
+                result.className =
+                    "result success";
+
+
+                result.innerHTML = `
+
+                    <p>
+                        Camera started successfully.
+                    </p>
+
+                    <p>
+                        Click
+                        <strong>
+                            Start Blink Verification
+                        </strong>
+                        when ready.
+                    </p>
+
+                `;
+
+
+            }
+            catch (error) {
+
+                result.className =
+                    "result error";
+
+
+                result.innerHTML = `
+
+                    <h3>
+                        Camera Error
+                    </h3>
+
+                    <p>
+                        Unable to access the camera.
+                    </p>
+
+                    <p>
+                        <strong>
+                            Error:
+                        </strong>
+
+                        ${error.message}
+                    </p>
+
+                `;
+
+            }
+
+        }
+
+
+        // ====================================================
+        // START BLINK VERIFICATION
+        // ====================================================
+
+        async function startBlinkVerification() {
+
+            if (!cameraStream) {
+                return;
+            }
+
+
+            const button =
+                document.getElementById(
+                    "startBlinkButton"
+                );
+
+
+            const instruction =
+                document.getElementById(
+                    "blinkInstruction"
+                );
+
+
+            const status =
+                document.getElementById(
+                    "blinkStatus"
+                );
+
+
+            const result =
+                document.getElementById(
+                    "liveResult"
+                );
+
+
+            button.disabled =
+                true;
+
+
+            button.innerText =
+                "Blink Verification Running...";
+
+
+            instruction.style.display =
+                "block";
+
+
+            status.style.display =
+                "block";
+
+
+            status.innerHTML = `
+                <span class="blink-waiting">
+                    Waiting for blink...
+                </span>
+            `;
+
+
+            result.className =
+                "result success";
+
+
+            result.innerHTML = `
+                <p class="loading">
+                    Starting active liveness verification...
+                </p>
+            `;
+
+
+            try {
+
+                const response =
+                    await fetch(
+                        "/blink/start",
+                        {
+                            method: "POST"
+                        }
+                    );
+
+
+                const data =
+                    await response.json();
+
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        data.message ||
+                        "Unable to start blink verification."
+                    );
+                }
+
+
+                blinkRunning =
+                    true;
+
+
+                result.innerHTML = `
+
+                    <div class="liveness-box">
+
+                        <h3>
+                            Active Liveness Detection
+                        </h3>
+
+                        <p>
+                            👁️ Please blink naturally once.
+                        </p>
+
+                        <p>
+                            Keep your face clearly visible.
+                        </p>
+
+                    </div>
+
+                `;
+
+
+                startBlinkFrameLoop();
+
+
+            }
+            catch (error) {
+
+                blinkRunning =
+                    false;
+
+
+                button.disabled =
+                    false;
+
+
+                button.innerText =
+                    "Start Blink Verification";
+
+
+                result.className =
+                    "result error";
+
+
+                result.innerHTML = `
+                    <h3>
+                        Blink Verification Error
+                    </h3>
+
+                    <p>
+                        ${error.message}
+                    </p>
+                `;
+
+            }
+
+        }
+
+
+        // ====================================================
+        // CONTINUOUS BLINK FRAME LOOP
+        // ====================================================
+
+        function startBlinkFrameLoop() {
+
+            if (!blinkRunning) {
+                return;
+            }
+
+
+            processCurrentFrame();
+
+
+            blinkTimer =
+                setTimeout(
+                    startBlinkFrameLoop,
+                    180
+                );
+
+        }
+
+
+        // ====================================================
+        // PROCESS CURRENT CAMERA FRAME
+        // ====================================================
+
+        async function processCurrentFrame() {
+
+            const video =
+                document.getElementById(
+                    "camera"
+                );
+
+
+            const canvas =
+                document.getElementById(
+                    "cameraCanvas"
+                );
+
+
+            if (
+                !video ||
+                !canvas ||
+                !cameraStream
+            ) {
+                return;
+            }
+
+
+            if (
+                video.videoWidth === 0 ||
+                video.videoHeight === 0
+            ) {
+                return;
+            }
+
+
+            canvas.width =
+                video.videoWidth;
+
+
+            canvas.height =
+                video.videoHeight;
+
+
+            const context =
+                canvas.getContext(
+                    "2d"
+                );
+
+
+            context.drawImage(
+                video,
+                0,
+                0,
+                canvas.width,
+                canvas.height
+            );
+
+
+            canvas.toBlob(
+
+                async function(blob) {
+
+                    if (
+                        !blob ||
+                        !blinkRunning
+                    ) {
+                        return;
+                    }
+
+
+                    const formData =
+                        new FormData();
+
+
+                    formData.append(
+                        "frame",
+                        blob,
+                        "blink_frame.jpg"
+                    );
+
+
+                    try {
+
+                        const response =
+                            await fetch(
+                                "/blink/frame",
+                                {
+                                    method: "POST",
+                                    body: formData
+                                }
+                            );
+
+
+                        const data =
+                            await response.json();
+
+
+                        if (!response.ok) {
+                            return;
+                        }
+
+
+                        updateBlinkUI(
+                            data
+                        );
+
+
+                    }
+                    catch (error) {
+
+                        console.error(
+                            "Blink frame error:",
+                            error
+                        );
+
+                    }
+
+                },
+
+                "image/jpeg",
+
+                0.80
+            );
+
+        }
+
+
+        // ====================================================
+        // UPDATE BLINK UI
+        // ====================================================
+
+        function updateBlinkUI(data) {
+
+            const status =
+                document.getElementById(
+                    "blinkStatus"
+                );
+
+
+            const instruction =
+                document.getElementById(
+                    "blinkInstruction"
+                );
+
+
+            const result =
+                document.getElementById(
+                    "liveResult"
+                );
+
+
+            if (!data.success) {
+
+                status.innerHTML = `
+                    <span class="blink-waiting">
+                        ${data.message ||
+                          "Face not detected."}
+                    </span>
+                `;
+
+                return;
+            }
+
+
+            if (data.blink_detected) {
+
+                blinkRunning =
+                    false;
+
+
+                if (blinkTimer) {
+
+                    clearTimeout(
+                        blinkTimer
+                    );
+
+                    blinkTimer =
+                        null;
+                }
+
+
+                instruction.style.display =
+                    "none";
+
+
+                status.innerHTML = `
+
+                    <span class="blink-success">
+
+                        ✓ Blink detected successfully!
+
+                    </span>
+
+                    <br><br>
+
+                    Left EAR:
+                    ${data.left_ear}
+
+                    <br>
+
+                    Right EAR:
+                    ${data.right_ear}
+
+                    <br>
+
+                    Blink Count:
+                    ${data.total_blinks}
+
+                `;
+
+
+                result.className =
+                    "result success";
+
+
+                result.innerHTML = `
+
+                    <div class="liveness-box">
+
+                        <h3>
+                            Active Liveness Result
+                        </h3>
+
+
+                        <div class="result-grid">
+
+
+                            <div class="result-item">
+
+                                <strong>
+                                    Liveness
+                                </strong>
+
+                                <span class="status-pass">
+                                    REAL
+                                </span>
+
+                            </div>
+
+
+                            <div class="result-item">
+
+                                <strong>
+                                    Blink Status
+                                </strong>
+
+                                <span class="status-pass">
+                                    VERIFIED
+                                </span>
+
+                            </div>
+
+
+                            <div class="result-item">
+
+                                <strong>
+                                    Blink Count
+                                </strong>
+
+                                ${data.total_blinks}
+
+                            </div>
+
+
+                            <div class="result-item">
+
+                                <strong>
+                                    Eye State
+                                </strong>
+
+                                ${data.eye_state}
+
+                            </div>
+
+
+                            <div class="result-item">
+
+                                <strong>
+                                    Left EAR
+                                </strong>
+
+                                ${data.left_ear}
+
+                            </div>
+
+
+                            <div class="result-item">
+
+                                <strong>
+                                    Right EAR
+                                </strong>
+
+                                ${data.right_ear}
+
+                            </div>
+
+
+                        </div>
+
+
+                        <p>
+
+                            <strong>
+                                Message:
+                            </strong>
+
+                            Blink detected successfully.
+                            Active liveness verification passed.
+
+                        </p>
+
+                    </div>
+
+                `;
+
+
+                const button =
+                    document.getElementById(
+                        "startBlinkButton"
+                    );
+
+
+                button.disabled =
+                    false;
+
+
+                button.innerText =
+                    "Blink Verified ✓";
+
+
+                // Final identity verification is unlocked only after
+                // liveness succeeds AND the backend captures live_face.jpg.
+                const identityButton =
+                    document.getElementById("identityVerifyButton");
+
+                const identityGateStatus =
+                    document.getElementById("identityGateStatus");
+
+                if (data.live_face_captured) {
+
+                    identityButton.disabled = false;
+                    identityButton.innerText =
+                        "Verify Complete Identity";
+
+                    identityGateStatus.innerHTML = `
+                        <span class="status-pass">
+                            🔓 Liveness verified: REAL
+                        </span>
+                        <br><br>
+                        ✓ Live face captured successfully.
+                        <br>
+                        Final identity verification is now available.
+                    `;
+
+                } else {
+
+                    identityButton.disabled = true;
+                    identityButton.innerText =
+                        "Verify Complete Identity";
+
+                    identityGateStatus.innerHTML = `
+                        <span class="status-low">
+                            ⚠️ Liveness passed, but live face capture failed.
+                        </span>
+                        <br><br>
+                        Please restart Live Verification.
+                    `;
+                }
+
+
+                return;
+            }
+
+
+            if (data.face_detected) {
+
+                let message =
+                    "Keep looking at the camera.";
+
+
+                if (
+                    data.eye_state === "CLOSED"
+                ) {
+
+                    message =
+                        "Eyes closed detected — open your eyes.";
+
+                }
+
+
+                status.innerHTML = `
+
+                    <span class="blink-waiting">
+                        ${message}
+                    </span>
+
+                    <br><br>
+
+                    Eye State:
+                    <strong>
+                        ${data.eye_state}
+                    </strong>
+
+                    <br>
+
+                    Left EAR:
+                    ${data.left_ear}
+
+                    <br>
+
+                    Right EAR:
+                    ${data.right_ear}
+
+                `;
+
+            }
+
+        }
+
+
+        // ====================================================
+        // STOP CAMERA
+        // ====================================================
+
+        async function stopCamera() {
+
+            blinkRunning =
+                false;
+
+
+            if (blinkTimer) {
+
+                clearTimeout(
+                    blinkTimer
+                );
+
+                blinkTimer =
+                    null;
+            }
+
+
+            try {
+
+                await fetch(
+                    "/blink/reset",
+                    {
+                        method: "POST"
+                    }
+                );
+
+            }
+            catch (error) {
+
+                console.error(
+                    error
+                );
+
+            }
+
+
+            const video =
+                document.getElementById(
+                    "camera"
+                );
+
+
+            const startButton =
+                document.getElementById(
+                    "startCameraButton"
+                );
+
+
+            const blinkButton =
+                document.getElementById(
+                    "startBlinkButton"
+                );
+
+
+            const stopButton =
+                document.getElementById(
+                    "stopCameraButton"
+                );
+
+
+            const instruction =
+                document.getElementById(
+                    "blinkInstruction"
+                );
+
+
+            const status =
+                document.getElementById(
+                    "blinkStatus"
+                );
+
+
+            if (cameraStream) {
+
+                cameraStream
+                    .getTracks()
+                    .forEach(
+                        track =>
+                            track.stop()
+                    );
+
+                cameraStream =
+                    null;
+            }
+
+
+            video.srcObject =
+                null;
+
+
+            video.style.display =
+                "none";
+
+
+            startButton.style.display =
+                "inline-block";
+
+
+            blinkButton.style.display =
+                "none";
+
+
+            blinkButton.disabled =
+                false;
+
+
+            blinkButton.innerText =
+                "Start Blink Verification";
+
+
+            stopButton.style.display =
+                "none";
+
+
+            instruction.style.display =
+                "none";
+
+
+            status.style.display =
+                "none";
+
+        }
+
+
+        // ====================================================
+        // CLEAN CAMERA ON PAGE CLOSE
+        // ====================================================
+
+        window.addEventListener(
+            "beforeunload",
+            function() {
+
+                if (cameraStream) {
+
+                    cameraStream
+                        .getTracks()
+                        .forEach(
+                            track =>
+                                track.stop()
+                        );
+
+                }
+
+            }
+        );
+
+    </script>
+
+</body>
+
+</html>

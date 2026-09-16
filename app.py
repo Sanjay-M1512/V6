@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 import os
 import uuid
+import cv2
 
 from Module1.services.preprocessing import preprocess_image
 from Module1.services.ocr_service import perform_ocr
@@ -14,6 +15,9 @@ from Module1.services.validation import (
     calculate_document_score,
     cross_document_validation
 )
+from Module2.routes.enrollment import enrollment_bp
+from Module3.app import biometrics_bp, OUTPUT_FOLDER as MOD3_OUTPUT_FOLDER
+from Module3.services.face_input import process_face_file
 
 
 # ============================================================
@@ -22,8 +26,12 @@ from Module1.services.validation import (
 
 app = Flask(
     __name__,
-    template_folder="Module1/templates"
+    template_folder="templates"
 )
+
+# Register Module 2 (Enrollment) & Module 3 (Biometrics) blueprints
+app.register_blueprint(enrollment_bp)
+app.register_blueprint(biometrics_bp)
 
 UPLOAD_FOLDER = "uploads"
 
@@ -45,12 +53,12 @@ def home():
 
 
 # ============================================================
-# PROCESS ONE DOCUMENT
+# PROCESS ONE DOCUMENT (MODULE 1 + OPTIONAL FACE EXTRACTION)
 # ============================================================
 
-def process_document(file):
+def process_document(file, doc_type_hint=None):
     """
-    Complete Module 1 processing pipeline.
+    Complete Module 1 processing pipeline with face extraction.
 
     Upload
        ↓
@@ -65,6 +73,8 @@ def process_document(file):
     Structure Validation
        ↓
     Document Score
+       ↓
+    Face Extraction (Module 3 bridge)
     """
 
     if file is None:
@@ -150,20 +160,48 @@ def process_document(file):
         )
 
 
-        return {
+        # ====================================================
+        # STEP 7 — FACE EXTRACTION (MODULE 3 INTEGRATION)
+        # ====================================================
+
+        face_data = None
+        try:
+            face_res = process_face_file(file_path)
+            if face_res.get("success") and face_res.get("face_image") is not None:
+                target_type = doc_type_hint or document_type
+                if target_type in ("passport", "aadhaar", "driving_license"):
+                    face_fname = f"{target_type}_face.jpg"
+                    face_out_path = os.path.join(MOD3_OUTPUT_FOLDER, face_fname)
+                    cv2.imwrite(face_out_path, face_res["face_image"])
+                    face_data = {
+                        "face_found": True,
+                        "face_filename": face_fname,
+                        "face_quality_score": face_res.get("face_quality_score"),
+                        "quality_status": face_res.get("quality_status"),
+                        "blur_score": face_res.get("blur_score"),
+                        "image_type": face_res.get("image_type"),
+                        "message": "Face extracted successfully"
+                    }
+        except Exception as face_err:
+            print(f"Face extraction warning for {file.filename}: {face_err}")
+
+
+        result_dict = {
             "document_type": document_type,
             "ocr": {
                 "text": ocr_text,
-                "confidence": ocr_confidence,
-                "general": ocr_result.get("general", {}),
-                "mrz": ocr_result.get("mrz", {}),
-                "aadhaar": ocr_result.get("aadhaar", {})
+                "confidence": ocr_confidence
             },
             "fields": fields,
             "field_validation": field_validation,
             "structure_validation": structure_validation,
             "document_score": document_score
         }
+
+        if face_data:
+            result_dict["face"] = face_data
+
+        return result_dict
 
     finally:
         if os.path.exists(file_path):
@@ -198,8 +236,8 @@ def verify_documents():
                 "message": "Aadhaar or Driving License image is required"
             }), 400
 
-        passport_result = process_document(passport_file)
-        id_result = process_document(id_file)
+        passport_result = process_document(passport_file, doc_type_hint="passport")
+        id_result = process_document(id_file, doc_type_hint=id_key)
 
         cross_validation = cross_document_validation(
             passport_result["fields"],
@@ -219,7 +257,8 @@ def verify_documents():
 
     except Exception as error:
 
-        print("\nVerification Error:", str(error))
+        import traceback
+        traceback.print_exc()
 
         return jsonify({
             "success": False,
