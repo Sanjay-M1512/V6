@@ -939,5 +939,5 @@ This project is developed for educational and research purposes.
 
 ---
 
-*TRUST-ID — Blockchain-Backed Multi-Layer Identity Verification & Forensic System*
+*V6 — Blockchain-Backed Multi-Layer Identity Verification & Forensic System*
 *Backend documentation v1.0 — complete. Blockchain on-chain integration is the next phase.*
