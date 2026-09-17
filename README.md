@@ -24,8 +24,12 @@ This is an enterprise-grade, multi-layer security and identity verification back
    - [Active Liveness Blink Detection (`POST /blink/*`)](#6-active-liveness-blink-detection-post-blinkstart-post-blinkframe-post-blinkreset)
    - [Tri-Modal Biometric Identity Matching & Risk Scoring (`POST /match/identity`)](#7-tri-modal-identity-matching--risk-scoring-post-matchidentity)
    - [Utility Endpoints (`GET /faces/<filename>`, `GET /health`)](#8-utility-endpoints)
+   - [User Authentication & Roles (`POST /api/register`, `POST /api/login`)](#9-user-authentication--roles)
+   - [Forensic & Audit Logs (`POST /api/logs`, `GET /api/logs`, `GET /api/logs/<id>`)](#10-forensic--audit-logs)
 6. [Data Models & Storage Specifications](#6-data-models--storage-specifications)
    - [Firestore Collection: `verification_db`](#firestore-collection-verification_db)
+   - [Firestore Collection: `users`](#firestore-collection-users)
+   - [Firestore Collection: `forensic_logs`](#firestore-collection-forensic_logs)
    - [National ID Derivation Formula](#national-id-derivation-formula)
    - [Simulated Blockchain Hash Calculation](#simulated-blockchain-hash-calculation)
    - [FIRPIV & WSQ Biometric Processing](#firpiv--wsq-biometric-processing)
@@ -493,7 +497,190 @@ Computes composite forensic risk score (0–100 scale).
 
 ---
 
+### 9. User Authentication & Roles
+
+Dedicated security layer for authorized officers and personnel across **SSB**, **Investigator**, and **Admin** roles.
+
+#### User Registration (`POST /api/register` or `POST /api/auth/register`)
+* **Content-Type:** `application/json` or `multipart/form-data`
+* **Allowed Roles:** `SSB`, `Investigator`, `Admin`
+* **Request Body:**
+```json
+{
+  "email": "officer@ssb.gov.in",
+  "role": "SSB",
+  "password": "SecurePassword!123"
+}
+```
+* **Success Response (HTTP 201):**
+```json
+{
+  "success": true,
+  "message": "User registered successfully",
+  "user": {
+    "id": "R7oIjy5Tf5FWRmrxb9Jl",
+    "email": "officer@ssb.gov.in",
+    "role": "SSB",
+    "created_at": "2026-09-17T15:20:11.664970+00:00"
+  }
+}
+```
+
+#### User Login (`POST /api/login` or `POST /api/auth/login`)
+* **Content-Type:** `application/json` or `multipart/form-data`
+* **Request Body:**
+```json
+{
+  "email": "officer@ssb.gov.in",
+  "password": "SecurePassword!123"
+}
+```
+* **Success Response (HTTP 200):**
+```json
+{
+  "success": true,
+  "message": "Login successful",
+  "user": {
+    "id": "R7oIjy5Tf5FWRmrxb9Jl",
+    "email": "officer@ssb.gov.in",
+    "role": "SSB"
+  }
+}
+```
+
+---
+
+### 10. Forensic & Audit Logs
+
+Provides real-time recording and auditing of the whole verification lifecycle (scores, documents, matches, integrity results) for forensic officers, investigators, and admins.
+
+#### Save Forensic Log (`POST /api/logs` or `POST /api/forensic/logs`)
+* **Content-Type:** `application/json` or `multipart/form-data`
+* **Request Body:**
+```json
+{
+  "action": "VERIFICATION",
+  "officer_email": "investigator@trustid.gov.in",
+  "role": "Investigator",
+  "passport_no": "F8026100",
+  "national_id": "9FBD41C1",
+  "second_doc_type": "aadhaar",
+  "second_doc_no": "982203949168",
+  "scores": {
+    "document_score": 95.0,
+    "fingerprint_match_score": 1.0,
+    "cross_validation_score": 1.0
+  },
+  "verification_status": "VERIFIED",
+  "details": {
+    "biometric_match": true,
+    "hash_match": true,
+    "notes": "Forensic verification test passed"
+  }
+}
+```
+* **Success Response (HTTP 201):**
+```json
+{
+  "success": true,
+  "message": "Forensic log recorded successfully",
+  "log_id": "26nRYQQeZ0S7MujXT4KP",
+  "log": {
+    "id": "26nRYQQeZ0S7MujXT4KP",
+    "event_type": "VERIFICATION",
+    "officer_email": "investigator@trustid.gov.in",
+    "role": "Investigator",
+    "passport_no": "F8026100",
+    "national_id": "9FBD41C1",
+    "second_doc_type": "aadhaar",
+    "second_doc_no": "982203949168",
+    "scores": {
+      "document_score": 95.0,
+      "fingerprint_match_score": 1.0,
+      "cross_validation_score": 1.0
+    },
+    "verification_status": "VERIFIED",
+    "details": { ... },
+    "timestamp": "2026-09-17T15:20:15.314680+00:00"
+  }
+}
+```
+
+#### View / Search Forensic Logs (`GET /api/logs` or `GET /api/forensic/logs`)
+* **Query Parameters (Optional):**
+  * `role`: Filter by officer role (`SSB`, `Investigator`, `Admin`)
+  * `status`: Filter by status (`VERIFIED`, `NOT_VERIFIED`, `FLAGGED`)
+  * `passport_no`: Filter by passport number
+  * `limit`: Limit results (default 50, max 200)
+* **Response (HTTP 200):**
+```json
+{
+  "success": true,
+  "count": 1,
+  "logs": [
+    {
+      "id": "26nRYQQeZ0S7MujXT4KP",
+      "timestamp": "2026-09-17T15:20:15.314680+00:00",
+      "event_type": "VERIFICATION",
+      "officer_email": "investigator@trustid.gov.in",
+      "role": "Investigator",
+      "passport_no": "F8026100",
+      "scores": { "document_score": 95.0, "fingerprint_match_score": 1.0 },
+      "verification_status": "VERIFIED"
+    }
+  ]
+}
+```
+
+#### View Single Forensic Log (`GET /api/logs/<log_id>` or `GET /api/forensic/logs/<log_id>`)
+* **Response (HTTP 200):** Returns complete record payload including all biometric match metrics, raw OCR fields, and verification reasons.
+
+---
+
 ## 6. Data Models & Storage Specifications
+
+### Firestore Collection: `users`
+
+Created exclusively for authorized security users (`SSB`, `Investigator`, `Admin`):
+
+```json
+{
+  "email": "officer@ssb.gov.in",
+  "role": "SSB",
+  "password": "SecurePassword!123",
+  "created_at": "2026-09-17T15:20:11.664970+00:00"
+}
+```
+
+### Firestore Collection: `forensic_logs`
+
+Stores end-to-end verification and forensic logs:
+
+```json
+{
+  "event_type": "VERIFICATION",
+  "officer_email": "officer@ssb.gov.in",
+  "role": "SSB",
+  "passport_no": "F8026100",
+  "national_id": "9FBD41C1",
+  "second_doc_type": "aadhaar",
+  "second_doc_no": "982203949168",
+  "scores": {
+    "passport_score": 92.5,
+    "id_score": 88.0,
+    "cross_validation_score": 1.0,
+    "fingerprint_match_score": 1.0
+  },
+  "verification_status": "VERIFIED",
+  "details": {
+    "cross_validation": { "status": "MATCH", "score": 1.0 },
+    "verification": { "final_status": "VERIFIED" },
+    "integrity": { "hash_match": true }
+  },
+  "timestamp": "2026-09-17T15:20:15.314680+00:00",
+  "created_at": "2026-09-17T15:20:15.314680+00:00"
+}
+```
 
 ### Firestore Collection: `verification_db`
 

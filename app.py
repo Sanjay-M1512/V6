@@ -17,7 +17,10 @@ from Module1.services.validation import (
     cross_document_validation
 )
 from Module2.routes.enrollment import enrollment_bp
+from Module2.routes.auth_routes import auth_bp
+from Module2.routes.log_routes import logs_bp
 from Module2.services.verification_service import verify_identity_workflow
+from Module2.services.log_service import save_forensic_log
 from Module3.app import biometrics_bp, OUTPUT_FOLDER as MOD3_OUTPUT_FOLDER
 from Module3.services.face_input import process_face_file
 
@@ -32,8 +35,10 @@ app = Flask(
 )
 CORS(app)  # Enable CORS for all origins
 
-# Register Module 2 (Enrollment) & Module 3 (Biometrics) blueprints
+# Register Module 2 (Enrollment, Auth, Logs) & Module 3 (Biometrics) blueprints
 app.register_blueprint(enrollment_bp)
+app.register_blueprint(auth_bp)
+app.register_blueprint(logs_bp)
 app.register_blueprint(biometrics_bp)
 
 UPLOAD_FOLDER = "uploads"
@@ -292,6 +297,61 @@ def verify_documents():
             if "integrity" in verif_res:
                 response_data["integrity"] = verif_res["integrity"]
 
+        # ----------------------------------------------------
+        # FORENSIC AUDIT LOGGING
+        # Automatically record complete process details & scores
+        # ----------------------------------------------------
+        try:
+            officer_email = (
+                request.form.get("officer_email")
+                or request.headers.get("X-Officer-Email")
+                or "system"
+            )
+            officer_role = (
+                request.form.get("role")
+                or request.headers.get("X-Officer-Role")
+                or "SSB"
+            )
+
+            scores_payload = {
+                "passport_score": passport_result.get("document_score"),
+                "id_score": id_result.get("document_score"),
+                "cross_validation_score": cross_validation.get("score") if isinstance(cross_validation, dict) else None,
+            }
+            if "fingerprint" in response_data and isinstance(response_data["fingerprint"], dict):
+                scores_payload["fingerprint_match_score"] = response_data["fingerprint"].get("match_score")
+
+            final_verdict = "DOCUMENT_VALIDATED"
+            if "verification" in response_data and isinstance(response_data["verification"], dict):
+                final_verdict = response_data["verification"].get("final_status", "UNKNOWN")
+
+            save_forensic_log({
+                "action": "VERIFICATION",
+                "officer_email": officer_email,
+                "role": officer_role,
+                "passport_no": passport_result.get("fields", {}).get("passport_number"),
+                "national_id": response_data.get("identity", {}).get("national_id"),
+                "second_doc_type": id_key,
+                "second_doc_no": (
+                    id_result.get("fields", {}).get("aadhaar_number")
+                    if id_key == "aadhaar"
+                    else id_result.get("fields", {}).get("dl_number")
+                ),
+                "scores": scores_payload,
+                "verification_status": final_verdict,
+                "details": {
+                    "passport_fields": passport_result.get("fields"),
+                    "id_fields": id_result.get("fields"),
+                    "cross_validation": cross_validation,
+                    "verification": response_data.get("verification"),
+                    "reason": response_data.get("reason"),
+                    "integrity": response_data.get("integrity")
+                }
+            })
+        except Exception as log_err:
+            print(f"[Warning] Forensic logging failed: {log_err}")
+
+        if officer_fp_file and officer_fp_file.filename:
             return jsonify(response_data), verif_code
 
         return jsonify(response_data)
