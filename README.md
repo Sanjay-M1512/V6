@@ -1,6 +1,6 @@
 # V6 : Blockchain-Backed Multi-Layer Identity Verification & Forensic System
 
-**TRUST-ID** is an enterprise-grade, multi-layer security and identity verification backend designed for authorized border control, law enforcement, and security personnel (such as SSB officers). It provides end-to-end verification of physical identity documents, cryptographic integrity checks against a trusted database, and dual-modality biometric validation (fingerprint and face with active liveness detection).
+This is an enterprise-grade, multi-layer security and identity verification backend designed for authorized border control, law enforcement, and security personnel (such as SSB officers). It provides end-to-end verification of physical identity documents, cryptographic integrity checks against a trusted database, and dual-modality biometric validation (fingerprint and face with active liveness detection).
 
 ---
 

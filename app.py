@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, jsonify
+from flask_cors import CORS
 import os
 import uuid
 import cv2
@@ -29,6 +30,7 @@ app = Flask(
     __name__,
     template_folder="templates"
 )
+CORS(app)  # Enable CORS for all origins
 
 # Register Module 2 (Enrollment) & Module 3 (Biometrics) blueprints
 app.register_blueprint(enrollment_bp)
