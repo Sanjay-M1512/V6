@@ -72,6 +72,31 @@ def get_enrollment_by_id(enrollment_id):
     return document_ref.to_dict()
 
 
+def get_all_enrollments(limit=100):
+    """
+    Returns all records in verification_db up to `limit`.
+    Each record includes its Firestore document ID as 'firebase_id'.
+    Sensitive fields (fingerprint_template) are stripped before returning.
+    """
+    db = get_db()
+    docs = (
+        db.collection(COLLECTION_NAME)
+        .order_by("created_at", direction=firestore.Query.DESCENDING)
+        .limit(limit)
+        .stream()
+    )
+
+    records = []
+    for doc in docs:
+        data = doc.to_dict()
+        data["firebase_id"] = doc.id
+        # Strip raw biometric template — too large and sensitive for a list view
+        data.pop("fingerprint_template", None)
+        records.append(data)
+
+    return records
+
+
 def find_identity_by_documents(passport_number, second_doc_number=None, second_doc_type=None):
     """
     Search verification_db for an enrolled identity record.

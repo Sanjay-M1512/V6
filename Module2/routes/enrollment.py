@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 
-from Module2.services.firebase_service import create_enrollment
+from Module2.services.firebase_service import create_enrollment, get_all_enrollments
 from Module2.services.firpiv_service import extract_fingerprint_template
 from Module2.services.pinata_service import upload_to_ipfs
 
@@ -390,3 +390,51 @@ def verify_identity_endpoint():
             "reason": f"Verification error: {str(e)}"
         }), 500
 
+
+# ============================================================
+# GET /api/verification-db
+# ============================================================
+
+@enrollment_bp.route("/verification-db", methods=["GET"])
+def list_verification_db():
+    """
+    Returns all enrolled identity records from the verification_db collection.
+
+    Query params:
+        limit  (int, 1-500, default 100)  -- max records to return
+        search (str, optional)            -- filter by name / passport_no / national_id
+    """
+    try:
+        limit = request.args.get("limit", 100)
+        try:
+            limit = max(1, min(int(limit), 500))
+        except (ValueError, TypeError):
+            limit = 100
+
+        search = (request.args.get("search") or "").strip().lower()
+
+        records = get_all_enrollments(limit=limit)
+
+        # Optional client-side filter
+        if search:
+            records = [
+                r for r in records
+                if search in (r.get("name") or "").lower()
+                or search in (r.get("passport_no") or "").lower()
+                or search in (r.get("national_id") or "").lower()
+            ]
+
+        return jsonify({
+            "success": True,
+            "count": len(records),
+            "records": records
+        }), 200
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "message": "Failed to fetch verification database",
+            "error": str(e)
+        }), 500
